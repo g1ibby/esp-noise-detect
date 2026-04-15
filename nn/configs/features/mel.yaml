@@ -1,0 +1,11 @@
+n_mels: 64
+fmin: 50.0
+fmax: null
+n_fft: 1024
+hop_length_ms: 10.0
+power: 2.0
+log: true
+eps: 1.0e-10
+normalize: true
+center: true
+pad_mode: reflect

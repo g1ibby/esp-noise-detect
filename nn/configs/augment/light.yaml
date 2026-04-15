@@ -1,0 +1,39 @@
+train:
+  enabled: true
+  shuffle: true
+  same_on_batch: false
+  transforms:
+    - type: gain
+      probability: 0.6
+      params:
+        min_gain_in_db: -6.0
+        max_gain_in_db: 6.0
+    - type: add_colored_noise
+      probability: 0.5
+      params:
+        min_snr_in_db: 12.0
+        max_snr_in_db: 28.0
+        min_f_decay: -1.0
+        max_f_decay: 1.0
+    - type: bandpass
+      probability: 0.4
+      params:
+        min_center_frequency: 150.0
+        max_center_frequency: 5500.0
+        min_bandwidth_fraction: 0.5
+        max_bandwidth_fraction: 1.5
+    - type: time_masking
+      probability: 0.3
+      params:
+        num_time_intervals: 2
+        max_width: 320
+val:
+  enabled: false
+  shuffle: false
+  same_on_batch: false
+  transforms: []
+test:
+  enabled: false
+  shuffle: false
+  same_on_batch: false
+  transforms: []

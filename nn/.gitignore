@@ -1,0 +1,22 @@
+# Training outputs
+runs/
+lightning_logs/
+outputs/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Model files (binary artifacts)
+*.espdl
+*.onnx
+*.ckpt
+*.pt
+*.pth
+
+# Virtual environment & caches
+.venv/
+.uv-cache/
+.ruff_cache/

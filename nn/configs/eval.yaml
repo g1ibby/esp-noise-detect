@@ -1,0 +1,36 @@
+defaults:
+  - dataset: manifest
+  - features: mel
+  - model: tinyconv
+  - augment: none
+  - experiment: null
+  - _self_
+
+hydra:
+  run:
+    dir: runs/${now:%Y-%m-%d_%H-%M-%S}
+  job:
+    chdir: true
+
+# Required: path to checkpoint to evaluate
+checkpoint: null
+
+# Data split to evaluate: val or test
+split: val
+
+# Aggregation mode for window -> file probability
+aggregate: mean  # mean|max
+
+# Decision threshold; if null and calibrate=true, tune on the split
+threshold: null
+calibrate: true
+window_metrics: false
+window_preds_csv: null
+
+# Optional outputs
+preds_csv: null
+metrics_json: metrics.json
+calibration_json: calibration.json
+
+# Random seed for deterministic augmentation (if enabled)
+seed: 42

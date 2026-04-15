@@ -1,0 +1,23 @@
+FROM rust:1-bookworm AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config libudev-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY Cargo.toml Cargo.lock ./
+COPY host-tools/ host-tools/
+COPY wire-protocol/ wire-protocol/
+COPY xtask/ xtask/
+
+RUN cargo build -p host-tools --bin wifi_audio_server --release
+
+FROM debian:bookworm-slim
+
+COPY --from=builder /src/target/release/wifi_audio_server /usr/local/bin/wifi_audio_server
+
+VOLUME /recordings
+EXPOSE 3000
+
+ENTRYPOINT ["wifi_audio_server"]
+CMD ["--port", "3000", "--output-dir", "/recordings"]

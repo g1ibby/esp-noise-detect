@@ -1,0 +1,15 @@
+train:
+  enabled: false
+  shuffle: true
+  same_on_batch: false
+  transforms: []
+val:
+  enabled: false
+  shuffle: false
+  same_on_batch: false
+  transforms: []
+test:
+  enabled: false
+  shuffle: false
+  same_on_batch: false
+  transforms: []

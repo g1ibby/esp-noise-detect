@@ -1,0 +1,25 @@
+{
+  "name": "pump-ct-sensor",
+  "version": "1.0.0",
+  "description": "CT-clamp signal conditioning board for pump current sensing (XIAO ESP32 ADC input)",
+  "main": "index.tsx",
+  "keywords": ["tscircuit", "circuit", "pcb", "electronics"],
+  "scripts": {
+    "dev": "tsci dev",
+    "build": "tsci build",
+    "snapshot": "tsci snapshot",
+    "snapshot:update": "tsci snapshot --update",
+    "start": "tsci dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "tscircuit": "^0.0.1599",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@tsci/imrishabh18.usb-c": "^0.0.1",
+    "@tsci/seveibar.xiao-esp32c6": "^0.0.1",
+    "@tscircuit/core": "^0.0.1142"
+  }
+}

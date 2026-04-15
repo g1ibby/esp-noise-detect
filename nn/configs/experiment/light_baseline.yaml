@@ -1,0 +1,14 @@
+# Baseline TinyConv with light augmentation and 1 s windows
+# Apply overrides at the top level when this experiment is selected
+# @package _global_
+
+defaults:
+  - /augment: light
+  - _self_
+
+trainer:
+  max_epochs: 20
+
+dataset:
+  window_s: 1.0
+  hop_s: 0.5

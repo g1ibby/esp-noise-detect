@@ -1,0 +1,18 @@
+[package]
+name = "wire-protocol"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["g1ibby"]
+description = "Shared wire protocol types for firmware-to-host communication"
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = []
+# Enable std-specific conveniences when used on host
+std = []
+
+[package.metadata.docs.rs]
+all-features = true
