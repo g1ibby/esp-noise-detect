@@ -6,9 +6,6 @@ on:
     paths:
       - "host-tools/**"
       - "wire-protocol/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "host-tools/Dockerfile"
       - ".github/workflows/docker-wifi-audio-server.yml"
     tags:
       - "v*"

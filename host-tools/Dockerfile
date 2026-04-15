@@ -5,16 +5,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-COPY Cargo.toml Cargo.lock ./
 COPY host-tools/ host-tools/
 COPY wire-protocol/ wire-protocol/
-COPY xtask/ xtask/
 
-RUN cargo build -p host-tools --bin wifi_audio_server --release
+RUN cargo build --manifest-path host-tools/Cargo.toml --bin wifi_audio_server --release
 
 FROM debian:bookworm-slim
 
-COPY --from=builder /src/target/release/wifi_audio_server /usr/local/bin/wifi_audio_server
+COPY --from=builder /src/host-tools/target/release/wifi_audio_server /usr/local/bin/wifi_audio_server
 
 VOLUME /recordings
 EXPOSE 3000
