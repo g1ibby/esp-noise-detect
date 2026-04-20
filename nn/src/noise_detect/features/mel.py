@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 import torch
-from torch import Tensor
+from torch import Tensor, nn
 
 from noise_detect.config import MelConfig
 
@@ -27,6 +27,42 @@ def _make_mel_transform(cfg: MelConfig, sample_rate: int):
         norm=None,
         mel_scale="htk",
     )
+
+
+class MelExtractor(nn.Module):
+    """Reusable log-mel extractor as an nn.Module.
+
+    Wrapping the torchaudio transform in a Module lets Lightning move its
+    filterbank/window buffers to the training device once, instead of rebuilding
+    on every batch (see features/mel.py:compute_mel).
+
+    Input: (T,) or (B, T). Output: (B, 1, n_mels, n_frames).
+    """
+
+    def __init__(self, cfg: MelConfig, sample_rate: int) -> None:
+        super().__init__()
+        self.cfg = cfg
+        self.sample_rate = int(sample_rate)
+        self.mel = _make_mel_transform(cfg, sample_rate)
+
+    def forward(self, waveform: Tensor) -> Tensor:
+        if waveform.dim() == 1:
+            waveform = waveform.unsqueeze(0)
+        if waveform.dim() != 2:
+            raise ValueError(
+                f"MelExtractor expected (T,) or (B, T), got {tuple(waveform.shape)}"
+            )
+        x = waveform.unsqueeze(1)  # (B, 1, T)
+        mel = self.mel(x)
+        if mel.dim() == 3:
+            mel = mel.unsqueeze(1)
+        elif mel.dim() == 4 and mel.shape[1] != 1:
+            mel = mel.mean(dim=1, keepdim=True)
+        if self.cfg.log:
+            mel = log_mel(mel, eps=self.cfg.eps)
+        if self.cfg.normalize:
+            mel = normalize_per_example(mel)
+        return mel
 
 
 def log_mel(x: Tensor, eps: float) -> Tensor:

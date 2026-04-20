@@ -204,6 +204,13 @@ class DataModuleConfig:
     batch_size: int = 64
     num_workers: int = 4
     pin_memory: bool = True
+    # Precompute mel-spectrograms once and train from a cached tensor file.
+    # Skips waveform decode/resample/mel on every batch; disables waveform-level
+    # augmentations (they'd need SpecAugment on the mel side instead).
+    use_cache: bool = True
+    # Optional override for the cache directory. If None, cache is placed next
+    # to the manifest under <manifest_dir>/.mel_cache/.
+    cache_dir: Optional[str] = None
 
 
 @dataclass

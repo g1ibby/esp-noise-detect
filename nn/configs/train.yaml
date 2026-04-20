@@ -26,6 +26,10 @@ dm:
   batch_size: 128
   num_workers: 4
   pin_memory: true
+  # Precompute log-mel spectrograms once into a cached tensor; subsequent epochs
+  # skip waveform decode/resample/FFT. Disables waveform augmentations.
+  use_cache: true
+  cache_dir: null
 
 optim:
   name: adamw

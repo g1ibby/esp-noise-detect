@@ -150,7 +150,7 @@ def evaluate(cfg: DictConfig) -> int:
 
     ckpt_dir = _to_abs(ckpt).parent
 
-    dm = PumpAudioDataModule(ds, dm_cfg, augment_cfg, seed=eval_seed)
+    dm = PumpAudioDataModule(ds, dm_cfg, augment_cfg, seed=eval_seed, mel_cfg=mel)
     dm.setup()
     loader = dm.val_dataloader() if split == "val" else dm.test_dataloader()
 
@@ -166,13 +166,15 @@ def evaluate(cfg: DictConfig) -> int:
 
     with torch.no_grad():
         for batch in loader:  # type: ignore[assignment]
-            wave = batch["waveform"]  # (B, T) CPU
             labels = batch["label"]  # (B,)
             files: list[str] = batch["file"]  # type: ignore[assignment]
             starts = batch.get("start_s")
             ends = batch.get("end_s")
-            mel_batch = compute_mel(wave, sample_rate=ds.sample_rate, cfg=mel)
-            mel_batch = mel_batch.to(dev)
+            if "mel" in batch:
+                mel_batch = batch["mel"].to(dev)
+            else:
+                wave = batch["waveform"]  # (B, T) CPU
+                mel_batch = compute_mel(wave, sample_rate=ds.sample_rate, cfg=mel).to(dev)
             logits = model(mel_batch)
             probs = torch.softmax(logits, dim=-1)[:, 1].detach().cpu()
             for idx, (f, p, y) in enumerate(zip(files, probs, labels)):

@@ -32,7 +32,7 @@ from noise_detect.config import (
     load_augmentation_config,
 )
 from noise_detect.data.datamodule import PumpAudioDataModule
-from noise_detect.features.mel import compute_mel
+from noise_detect.features.mel import MelExtractor
 from noise_detect.models.tinyconv import TinyConv
 from noise_detect.eval import evaluate as eval_model
 
@@ -64,6 +64,10 @@ class LitTinyConv(LightningModule):
         self.optim_cfg = optim_cfg
         self.sched_cfg = sched_cfg
         self.model = TinyConv(model_cfg, n_classes=len(ds_cfg.class_names))
+        # Registered submodule: Lightning moves its filterbank buffers to the
+        # training device. Used only when batches carry raw waveforms; batches
+        # from the mel cache come as (B, 1, n_mels, n_frames) already.
+        self.mel_extractor = MelExtractor(mel_cfg, ds_cfg.sample_rate)
         self.criterion = nn.CrossEntropyLoss()
 
         # Metrics
@@ -76,11 +80,12 @@ class LitTinyConv(LightningModule):
         return self.model(x)
 
     def _step(self, batch: dict[str, Any]) -> tuple[Tensor, Tensor, Tensor]:
-        wave: Tensor = batch["waveform"]  # (B, T) on CPU
-        labels: Tensor = batch["label"]  # (B,)
-        # CPU mel, then to device
-        mel = compute_mel(wave, sample_rate=self.ds_cfg.sample_rate, cfg=self.mel_cfg)
-        mel = mel.to(self.device)
+        labels: Tensor = batch["label"]
+        if "mel" in batch:
+            mel = batch["mel"].to(self.device, non_blocking=True)
+        else:
+            wave: Tensor = batch["waveform"].to(self.device, non_blocking=True)
+            mel = self.mel_extractor(wave)
         logits = self.forward(mel)
         loss = self.criterion(logits, labels.to(self.device))
         probs = torch.softmax(logits, dim=-1)[:, 1]
@@ -205,7 +210,7 @@ def _run_post_train_eval(best_ckpt: Path, tc: TrainAppConfig) -> None:
 def _hydra_entry(cfg: DictConfig) -> int:
     tc = _to_train_config(cfg)
     seed_everything(tc.trainer.seed, workers=True)
-    dm = PumpAudioDataModule(tc.dataset, tc.dm, tc.augment, tc.trainer.seed)
+    dm = PumpAudioDataModule(tc.dataset, tc.dm, tc.augment, tc.trainer.seed, mel_cfg=tc.mel)
     model = LitTinyConv(tc.dataset, tc.mel, tc.model, tc.optim, tc.sched)
     trainer = _build_trainer(tc.trainer)
     trainer.fit(model, datamodule=dm)
