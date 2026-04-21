@@ -40,6 +40,7 @@ def analyze(manifest_path: Path) -> None:
         return
     # Normalize to absolute paths relative to manifest
     root = manifest_path.parent
+
     def abs_path(p: str) -> Path:
         q = Path(p)
         if not q.is_absolute():
@@ -93,9 +94,15 @@ def analyze(manifest_path: Path) -> None:
             h = hashes.get(p)
             if h:
                 inv[h].append((s, p))
-    dup_tv = sum(1 for hs, items in inv.items() if {s for s, _ in items} >= {"train", "val"})
-    dup_tt = sum(1 for hs, items in inv.items() if {s for s, _ in items} >= {"train", "test"})
-    dup_vt = sum(1 for hs, items in inv.items() if {s for s, _ in items} >= {"val", "test"})
+    dup_tv = sum(
+        1 for hs, items in inv.items() if {s for s, _ in items} >= {"train", "val"}
+    )
+    dup_tt = sum(
+        1 for hs, items in inv.items() if {s for s, _ in items} >= {"train", "test"}
+    )
+    dup_vt = sum(
+        1 for hs, items in inv.items() if {s for s, _ in items} >= {"val", "test"}
+    )
     print("Content-duplicate overlaps (by SHA256):")
     print(f"  - train ↔ val: {dup_tv}")
     print(f"  - train ↔ test: {dup_tt}")
@@ -103,8 +110,15 @@ def analyze(manifest_path: Path) -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Check manifest split integrity and duplicates")
-    ap.add_argument("--manifest", type=str, default="../recordings/manifest.jsonl", help="Path to manifest.jsonl")
+    ap = argparse.ArgumentParser(
+        description="Check manifest split integrity and duplicates"
+    )
+    ap.add_argument(
+        "--manifest",
+        type=str,
+        default="../../voicy/recordings/manifest.jsonl",
+        help="Path to manifest.jsonl",
+    )
     args = ap.parse_args()
     manifest_path = Path(args.manifest).expanduser().resolve()
     if not manifest_path.exists():
@@ -115,4 +129,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

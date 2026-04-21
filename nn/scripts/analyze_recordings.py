@@ -40,7 +40,7 @@ def find_recordings_root(explicit_root: Optional[Path]) -> Path:
     if explicit_root is not None:
         return explicit_root
     # Default root per AGENTS.md/README
-    primary = Path("../recordings").resolve()
+    primary = Path("../../voicy/recordings").resolve()
     fallback = Path("../host-tools/recordings").resolve()
     if primary.exists():
         return primary
@@ -200,7 +200,7 @@ def summarize(stats: List[FileStats]) -> str:
     for sr in sorted(sr_counts.keys()):
         cnt = sr_counts[sr]
         dur = sr_durations.get(sr, 0.0)
-        lines.append(f"- {sr/1000:.1f} kHz: {cnt} files | {human_time(dur)}")
+        lines.append(f"- {sr / 1000:.1f} kHz: {cnt} files | {human_time(dur)}")
     lines.append("")
 
     # Bit depths
@@ -301,7 +301,7 @@ def _stft_energy_streamed(
             i += hop_length
             frame = frame * window
             spec = np.fft.rfft(frame, n=n_fft)
-            power = (spec.real ** 2 + spec.imag ** 2)
+            power = spec.real**2 + spec.imag**2
             if psd_sum is None:
                 psd_sum = power
             else:
@@ -316,7 +316,9 @@ def _stft_energy_streamed(
     return freqs, psd_sum
 
 
-def compute_spectral_metrics(path: Path, block_size: int = 262144) -> Optional[SpectralMetrics]:
+def compute_spectral_metrics(
+    path: Path, block_size: int = 262144
+) -> Optional[SpectralMetrics]:
     try:
         info = sf.info(str(path))
     except RuntimeError:
@@ -367,6 +369,7 @@ def compute_spectral_metrics(path: Path, block_size: int = 262144) -> Optional[S
 
     # Rolloff percentiles
     cumsum = np.cumsum(psd_sum)
+
     def rolloff(p: float) -> float:
         target = p * total_energy
         idx = int(np.searchsorted(cumsum, target, side="left"))
@@ -389,7 +392,9 @@ def compute_spectral_metrics(path: Path, block_size: int = 262144) -> Optional[S
     )
 
 
-def write_spectral_csv(rows: List[Tuple[Path, Optional[str], SpectralMetrics]], out_path: Path) -> None:
+def write_spectral_csv(
+    rows: List[Tuple[Path, Optional[str], SpectralMetrics]], out_path: Path
+) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -433,7 +438,9 @@ def write_spectral_csv(rows: List[Tuple[Path, Optional[str], SpectralMetrics]], 
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Analyze WAV recordings: duration, SR, bit depth, labels")
+    parser = argparse.ArgumentParser(
+        description="Analyze WAV recordings: duration, SR, bit depth, labels"
+    )
     parser.add_argument(
         "--root",
         type=Path,
@@ -497,8 +504,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             print("\nNo spectral metrics computed (files unreadable or silent)")
         else:
             # Aggregate guidance
-            fracs_8k = np.array([r[2].energy_frac_lt_8k for r in spectral_rows], dtype=np.float64)
-            roll95 = np.array([r[2].rolloff_95_hz for r in spectral_rows], dtype=np.float64)
+            fracs_8k = np.array(
+                [r[2].energy_frac_lt_8k for r in spectral_rows], dtype=np.float64
+            )
+            roll95 = np.array(
+                [r[2].rolloff_95_hz for r in spectral_rows], dtype=np.float64
+            )
             med_frac8 = float(np.median(fracs_8k))
             p10_roll95 = float(np.percentile(roll95, 10))
             p90_roll95 = float(np.percentile(roll95, 90))

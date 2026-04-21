@@ -6,6 +6,9 @@ defaults:
   - /augment: light
   - _self_
 
+dm:
+  use_cache: false
+
 trainer:
   max_epochs: 20
 
