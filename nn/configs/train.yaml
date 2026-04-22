@@ -1,10 +1,10 @@
 defaults:
+  - _self_
   - dataset: manifest
   - features: mel
   - model: tinyconv
   - augment: none
   - experiment: null
-  - _self_
 
 hydra:
   run:

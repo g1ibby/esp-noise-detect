@@ -37,17 +37,9 @@ class FileStats:
 
 
 def find_recordings_root(explicit_root: Optional[Path]) -> Path:
-    if explicit_root is not None:
-        return explicit_root
-    # Default root per AGENTS.md/README
-    primary = Path("../../voicy/recordings").resolve()
-    fallback = Path("../host-tools/recordings").resolve()
-    if primary.exists():
-        return primary
-    if fallback.exists():
-        return fallback
-    # If neither exists, default to primary path to produce a clear error later
-    return primary
+    if explicit_root is None:
+        raise ValueError("--root is required")
+    return explicit_root
 
 
 def load_manifest(manifest_path: Optional[Path]) -> Dict[Path, str]:

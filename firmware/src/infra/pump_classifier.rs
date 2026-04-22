@@ -21,7 +21,7 @@ use crate::{
 extern crate edgedl_macros;
 
 // Bind the model
-#[edgedl_macros::espdl_model(path = "./models/noise_model_4.espdl")]
+#[edgedl_macros::espdl_model(path = "./models/noise_model_5.espdl")]
 struct __ModelBind;
 
 // Constants from the noise example/model
@@ -38,6 +38,19 @@ const CENTER: bool = true;
 // Buffer sizes
 // We need 1 second of audio at 32kHz.
 const INFER_WINDOW_SAMPLES: usize = 32000;
+
+// Hysteresis / debounce to cut field false-positive bursts. The model decides
+// per 1-second window; single flaky windows otherwise generate visible
+// false events. We emit a state change only after STATE_CHANGE_STREAK
+// consecutive windows agree on the new label, AND the required probability
+// asymmetry differs for on->off vs off->on so it's harder to switch ON than
+// OFF (off is the safe default).
+const STATE_CHANGE_STREAK: u8 = 1;
+// Probability margins. `off_prob > on_prob` alone is not enough to flip to ON;
+// we require on_prob >= ON_THRESHOLD. Flipping to OFF just requires on_prob <
+// OFF_THRESHOLD. The gap gives a classic hysteresis band that absorbs noise.
+const ON_THRESHOLD: f32 = 0.70;
+const OFF_THRESHOLD: f32 = 0.45;
 
 static INPUT: ConstStaticCell<edgedl::Aligned16<[i8; N_MELS * N_FRAMES]>> =
     ConstStaticCell::new(edgedl::Aligned16([0; N_MELS * N_FRAMES]));
@@ -72,6 +85,13 @@ pub async fn pump_classifier(
 
     // Audio accumulation buffer (mono, 16-bit)
     let mut audio_buffer: Vec<i16> = Vec::with_capacity(INFER_WINDOW_SAMPLES + 4096);
+
+    // Hysteresis state: start OFF (safe default). `pending_streak` counts
+    // consecutive raw decisions that disagree with `emitted`; only when it
+    // reaches STATE_CHANGE_STREAK do we flip and emit.
+    let mut emitted: PumpState = PumpState::Off;
+    let mut pending: Option<PumpState> = None;
+    let mut pending_streak: u8 = 0;
 
     loop {
         // Receive audio chunks from NetOutChannel
@@ -136,20 +156,56 @@ pub async fn pump_classifier(
                     let pred_ms = t_pred.elapsed().as_millis();
                     let off_prob = probs[0];
                     let on_prob = probs[1];
-                    let label = if on_prob > off_prob {
-                        PumpState::On
+
+                    // Asymmetric thresholds with hysteresis band.
+                    // Raw decision: ON only if on_prob >= ON_THRESHOLD,
+                    // OFF only if on_prob < OFF_THRESHOLD. Probabilities
+                    // inside the band leave `raw` = None (hold current state).
+                    let raw: Option<PumpState> = if on_prob >= ON_THRESHOLD {
+                        Some(PumpState::On)
+                    } else if on_prob < OFF_THRESHOLD {
+                        Some(PumpState::Off)
                     } else {
-                        PumpState::Off
+                        None
                     };
+
+                    // K-of-N debounce on top of the hysteresis band.
+                    if let Some(candidate) = raw {
+                        if candidate == emitted {
+                            pending = None;
+                            pending_streak = 0;
+                        } else if Some(candidate) == pending {
+                            pending_streak = pending_streak.saturating_add(1);
+                            if pending_streak >= STATE_CHANGE_STREAK {
+                                emitted = candidate;
+                                pending = None;
+                                pending_streak = 0;
+                            }
+                        } else {
+                            pending = Some(candidate);
+                            pending_streak = 1;
+                        }
+                    }
+
+                    // Emit the smoothed state every inference so downstream
+                    // consumers get a regular heartbeat and can distinguish
+                    // "still alive, still off" from "device silent."
+                    status_channel.try_send(emitted).ok();
 
                     let total_ms = t_total.elapsed().as_millis();
                     info!(
-                        "Inference timings: mel={}ms quant={}ms rt_new={}ms pred={}ms total={}ms | probs: OFF={:.3} ON={:.3} -> {:?}",
-                        mel_ms, quant_ms, rt_new_ms, pred_ms, total_ms, off_prob, on_prob, label
+                        "Inference timings: mel={}ms quant={}ms rt_new={}ms pred={}ms total={}ms | probs: OFF={:.3} ON={:.3} raw={:?} emitted={:?} streak={}",
+                        mel_ms,
+                        quant_ms,
+                        rt_new_ms,
+                        pred_ms,
+                        total_ms,
+                        off_prob,
+                        on_prob,
+                        raw,
+                        emitted,
+                        pending_streak
                     );
-
-                    // Send status
-                    status_channel.try_send(label).ok();
                 }
 
                 // Clear buffer for next window

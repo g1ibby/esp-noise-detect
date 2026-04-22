@@ -1,0 +1,61 @@
+# SkyPilot task for training noise-detect on RunPod.
+#
+# Usage (run from the `nn/` directory):
+#
+#   sky launch -c pump sky.yaml            # provision + setup + train
+#   rsync -avz --progress \
+#     $(sky status --ip pump):~/sky_workdir/runs/ ./runs/
+#   sky down pump                          # destroy the pod
+#
+# Re-run training on the SAME cluster (skips re-upload of the 7.2 GB data):
+#
+#   sky exec pump sky.yaml
+
+name: pump-train
+
+resources:
+  infra: runpod
+  use_spot: true            # ~50% cheaper; training is short enough to tolerate preemption
+  disk_size: 50             # GB; recordings (~8.6 GB) + venv + cache
+  # robust_session is CPU-bound (torch-audiomentations + on-the-fly mel); the GPU
+  # sits at ~0% on low-core pods. All candidates below have ≥12 vCPU; SkyPilot
+  # picks the cheapest available. RTXPRO4500 is listed first in case it frees up.
+  any_of:
+    - accelerators: L40S:1              # $0.26/hr spot, 12 vCPU, 62 GB RAM — primary
+    - accelerators: RTXPRO4500:1        # $0.27/hr spot, 28 vCPU, 62 GB RAM — if available
+    - accelerators: A100-80GB-SXM:1     # $0.95/hr spot, 16 vCPU, 117 GB RAM — last resort
+
+workdir: .   # uploads the nn/ tree (respects .gitignore — runs/, .venv/ skipped)
+
+file_mounts:
+  # Cloudflare R2 bucket. First launch uploads the local recordings folder
+  # once from laptop → R2 (~7.4 GB, slow). Every subsequent launch pulls from
+  # R2 server-to-server (fast), with zero Cloudflare egress fees. The bucket
+  # is kept across sky down operations so it's a one-time upload cost.
+  /data:
+    name: pump-dataset
+    source: ${RECORDINGS_PATH}  # Set via: export RECORDINGS_PATH=/path/to/recordings
+    store: r2
+    mode: COPY            # full download to pod disk at launch (fast random access)
+    persistent: true      # preserve bucket across `sky down`
+
+setup: |
+  set -euo pipefail
+  # Install uv (provides Python 3.13 automatically via pyproject.toml).
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="$HOME/.local/bin:$PATH"
+  # Resolve + install deps from uv.lock; --extra dev pulls torch et al.
+  uv sync --extra dev
+
+run: |
+  set -euo pipefail
+  export PATH="$HOME/.local/bin:$PATH"
+  nvidia-smi
+  # bf16 is critical: fp16 + torch-audiomentations produces NaN loss in practice.
+  # num_workers=10 leaves 2 vCPUs for main + OS on the 12-vCPU L40S (safe for any
+  # candidate in resources.any_of, all of which have ≥12 vCPU).
+  uv run -m noise_detect.train \
+    experiment=robust_session \
+    dataset.manifest_path=/data/manifest.jsonl \
+    trainer.precision=bf16-mixed \
+    dm.num_workers=10

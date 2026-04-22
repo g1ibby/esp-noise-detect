@@ -1,0 +1,56 @@
+# Robust-lite: same augmentation philosophy as `robust.yaml` but narrower
+# ranges and cheaper transforms, tuned so a [16, 32, 64]-channel TinyConv
+# has enough capacity left for the actual task.
+#
+# Dropped vs robust.yaml:
+#  - pitch_shift           (CPU-heavy, large invariance demand; pump
+#                           fundamental frequency is a real feature, not noise)
+#  - polarity_inversion    (useless for mel-power features; ~0 gain, extra work)
+# Narrowed vs robust.yaml:
+#  - gain        ±12 dB  ->  ±8 dB
+#  - noise SNR   0-25 dB ->  5-25 dB   (still covers "loud negatives" regime)
+# Kept:
+#  - highpass / lowpass randomization (cheap domain-shift simulation)
+#  - time_masking                     (SpecAugment-style, free regularization)
+train:
+  enabled: true
+  shuffle: true
+  same_on_batch: false
+  transforms:
+    - type: gain
+      probability: 0.8
+      params:
+        min_gain_in_db: -8.0
+        max_gain_in_db: 8.0
+    - type: add_colored_noise
+      probability: 0.7
+      params:
+        min_snr_in_db: 5.0
+        max_snr_in_db: 25.0
+        min_f_decay: -1.5
+        max_f_decay: 1.5
+    - type: highpass
+      probability: 0.2
+      params:
+        min_cutoff_freq: 40.0
+        max_cutoff_freq: 200.0
+    - type: lowpass
+      probability: 0.2
+      params:
+        min_cutoff_freq: 8000.0
+        max_cutoff_freq: 14000.0
+    - type: time_masking
+      probability: 0.4
+      params:
+        num_time_intervals: 2
+        max_width: 400
+val:
+  enabled: false
+  shuffle: false
+  same_on_batch: false
+  transforms: []
+test:
+  enabled: false
+  shuffle: false
+  same_on_batch: false
+  transforms: []

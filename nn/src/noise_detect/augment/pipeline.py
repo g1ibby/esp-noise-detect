@@ -64,13 +64,16 @@ def _normalize_params(params: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-def build_pipeline(cfg: AugmentationPipelineConfig) -> Optional[BaseWaveformTransform]:
+def build_pipeline(
+    cfg: AugmentationPipelineConfig,
+    sample_rate: Optional[int] = None,
+) -> Optional[BaseWaveformTransform]:
     if not cfg.enabled or not cfg.transforms:
         return None
 
     transforms: list[BaseWaveformTransform] = []
     for item in cfg.transforms:
-        transforms.append(_build_transform(item, cfg.same_on_batch))
+        transforms.append(_build_transform(item, cfg.same_on_batch, sample_rate))
     if not transforms:
         return None
     return Compose(
@@ -84,6 +87,7 @@ def build_pipeline(cfg: AugmentationPipelineConfig) -> Optional[BaseWaveformTran
 def _build_transform(
     cfg: AugmentationTransformConfig,
     same_on_batch: bool,
+    sample_rate: Optional[int] = None,
 ) -> BaseWaveformTransform:
     cls = _TRANSFORM_REGISTRY.get(cfg.type)
     if cls is None:
@@ -105,6 +109,15 @@ def _build_transform(
                 params["p_mode"] = "per_batch"
         if "output_type" in sig.parameters and "output_type" not in params:
             params["output_type"] = "tensor"
+        # Some transforms (PitchShift) require sample_rate at construction time
+        # because they build internal resampling kernels. Provide it when the
+        # constructor accepts it and the caller passed one.
+        if (
+            sample_rate is not None
+            and "sample_rate" in sig.parameters
+            and "sample_rate" not in params
+        ):
+            params["sample_rate"] = int(sample_rate)
     return cls(**params)
 
 

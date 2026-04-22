@@ -3,9 +3,25 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
+
+
+SESSION_TS_RE = re.compile(r"_(\d{10})_")
+
+
+def session_ts_of(path: Path) -> Optional[int]:
+    """Extract the 10-digit unix timestamp embedded in filenames like
+    xiao_esp32s3_<ts>_c000_off_chunk000.wav. Returns None if missing."""
+    m = SESSION_TS_RE.search(path.name)
+    return int(m.group(1)) if m else None
+
+
+def session_day_of(ts: int) -> str:
+    return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
 
 
 def read_manifest(path: Path) -> List[dict]:
@@ -108,6 +124,49 @@ def analyze(manifest_path: Path) -> None:
     print(f"  - train ↔ test: {dup_tt}")
     print(f"  - val ↔ test: {dup_vt}")
 
+    # Session- and day-level leakage: recording sessions typically span many
+    # chunk files that share an acoustic context (same ambient, same mic
+    # placement, same few minutes). Random per-file splits routinely leak
+    # sessions across train/val/test and inflate test accuracy. This block
+    # reports how many sessions/days appear in more than one split.
+    sessions_per_split: Dict[str, set[int]] = defaultdict(set)
+    days_per_split: Dict[str, set[str]] = defaultdict(set)
+    files_missing_ts = 0
+    for split, paths in by_split.items():
+        for p in paths:
+            ts = session_ts_of(p)
+            if ts is None:
+                files_missing_ts += 1
+                continue
+            sessions_per_split[split].add(ts)
+            days_per_split[split].add(session_day_of(ts))
+
+    tr_s = sessions_per_split.get("train", set())
+    va_s = sessions_per_split.get("val", set())
+    te_s = sessions_per_split.get("test", set())
+    tr_d = days_per_split.get("train", set())
+    va_d = days_per_split.get("val", set())
+    te_d = days_per_split.get("test", set())
+
+    print("Session counts per split:")
+    print(f"  - train: {len(tr_s)}  val: {len(va_s)}  test: {len(te_s)}")
+    print("Day counts per split:")
+    print(f"  - train: {len(tr_d)}  val: {len(va_d)}  test: {len(te_d)}")
+
+    if files_missing_ts:
+        print(
+            f"  (skipped {files_missing_ts} files where filename has no session timestamp)"
+        )
+
+    print("Session leakage (same session across splits):")
+    print(f"  - train ∩ val: {len(tr_s & va_s)}")
+    print(f"  - train ∩ test: {len(tr_s & te_s)}")
+    print(f"  - val ∩ test: {len(va_s & te_s)}")
+    print("Day leakage (same day across splits):")
+    print(f"  - train ∩ val: {len(tr_d & va_d)}")
+    print(f"  - train ∩ test: {len(tr_d & te_d)}")
+    print(f"  - val ∩ test: {len(va_d & te_d)}")
+
 
 def main() -> None:
     ap = argparse.ArgumentParser(
@@ -116,7 +175,7 @@ def main() -> None:
     ap.add_argument(
         "--manifest",
         type=str,
-        default="../../voicy/recordings/manifest.jsonl",
+        required=True,
         help="Path to manifest.jsonl",
     )
     args = ap.parse_args()

@@ -1,9 +1,13 @@
-# Baseline TinyConv with light augmentation and 1 s windows
-# Apply overrides at the top level when this experiment is selected
 # @package _global_
+# Baseline TinyConv with light augmentation and 1 s windows.
+# NOTE: the @package directive above MUST be the very first line of this file
+# (Hydra parses the file header before any YAML). Putting it after other
+# comments causes the file to load under `experiment.*` instead of merging
+# at the top level — this was a real bug in the prior version that made
+# augmentation silently never run.
 
 defaults:
-  - /augment: light
+  - override /augment: light
   - _self_
 
 dm:

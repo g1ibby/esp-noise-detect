@@ -54,18 +54,26 @@ Labels are inferred from the filename. Each WAV must contain either the token `o
 
 Files that can't be labeled unambiguously are silently skipped — check the summary output to confirm counts.
 
+**Session timestamp.** If you plan to use the session- or day-aware split (recommended; see below), filenames should embed a 10-digit unix timestamp identifying the recording session, e.g. `xiao_esp32s3_1759581195_c000_off_chunk000.wav`. All chunks from the same recording session share that timestamp, so the splitter can keep a session's files together.
+
+**Label-noise suffixes.** By default the manifest builder **excludes** files containing `_canceled`, `_timeout`, or `_undefined` — those correspond to aborted or truncated sessions and carry significant label noise. Pass `--keep-flagged` if you want them in anyway.
+
 ### Generate the manifest
 
-`scripts/build_manifest.py` walks the folder, assigns stratified train/val/test splits (80/10/10 by default), and writes `manifest.jsonl` **into the recordings folder itself** (next to your WAVs). Paths inside the manifest are stored relative to that folder.
+`scripts/build_manifest.py` walks the folder, assigns train/val/test splits (80/10/10 by default), and writes `manifest.jsonl` **into the recordings folder itself** (next to your WAVs). Paths inside the manifest are stored relative to that folder.
 
 ```bash
-# Preview (no file written)
+# Preview (no file written). Default: split by whole recording session.
 uv run python scripts/build_manifest.py --data-root /path/to/recordings --dry-run
 
-# Write the manifest
-uv run python scripts/build_manifest.py --data-root /path/to/recordings
-# → /path/to/recordings/manifest.jsonl
+# Write the manifest, keeping all files from the same *day* in one split
+# (strongest held-out signal; recommended if you have >= ~10 recording days).
+uv run python scripts/build_manifest.py \
+  --data-root /path/to/recordings \
+  --split-by day
 ```
+
+**Pick the split strategy with care.** A random per-file shuffle silently leaks recording sessions across splits and produces inflated test accuracy: many chunk files share the same ambient noise and mic placement, so the model just recognizes the session. Use `--split-by session` (default) or `--split-by day` to keep whole sessions/days together.
 
 Options:
 
@@ -73,9 +81,20 @@ Options:
 |------|---------|-------------|
 | `--data-root` | *(required)* | Folder containing your WAV files (searched recursively) |
 | `--output` | `<data-root>/manifest.jsonl` | Override output location |
+| `--split-by` | `session` | `session` (whole session → one split), `day` (whole calendar day → one split), or `random` (legacy, leaks sessions) |
+| `--keep-flagged` | off | Keep `_canceled` / `_timeout` / `_undefined` files (default: exclude — they carry label noise) |
 | `--val-ratio` | `0.1` | Validation split fraction |
 | `--test-ratio` | `0.1` | Test split fraction |
 | `--seed` | `42` | Shuffle seed for split assignment |
+
+After building, verify the split is clean (0 session/day overlap):
+
+```bash
+uv run python scripts/check_split_integrity.py \
+  --manifest /path/to/recordings/manifest.jsonl
+```
+
+The script reports path/content-hash duplicates **and** session/day-level leakage.
 
 Manifest format:
 ```json
@@ -87,46 +106,59 @@ Manifest format:
 
 ## 3. Train
 
-Point Hydra at your manifest:
+### Recommended command
+
+```bash
+uv run -m noise_detect.train \
+  experiment=robust_session \
+  dataset.manifest_path=/path/to/recordings/manifest.jsonl
+```
+
+This bundles what we've validated as best for this task: the `robust_lite` augmentation profile (gain / colored noise / high+low-pass / time masking — tuned to keep a small `[16, 32, 64]`-channel model generalizing well), cosine LR, 30 epochs with early stopping, and `dm.use_cache: false` so waveform augmentation actually runs (the cached-mel path silently skips it). Checkpoints land in `runs/<timestamp>/checkpoints/best.ckpt`.
+
+### Minimal alternative
+
+If you just want a fast baseline run without augmentation:
 
 ```bash
 uv run -m noise_detect.train dataset.manifest_path=/path/to/recordings/manifest.jsonl
 ```
 
-Checkpoints are written to `runs/<timestamp>/checkpoints/best.ckpt` (Hydra changes into `runs/<timestamp>/` during the job).
-
 ### Common overrides
 
 ```bash
-# More epochs + augmentation
-uv run -m noise_detect.train \
-  dataset.manifest_path=/path/to/recordings/manifest.jsonl \
-  trainer.max_epochs=50 \
-  augment=light
-
 # Smaller windows (faster on-device inference)
 uv run -m noise_detect.train \
+  experiment=robust_session \
   dataset.manifest_path=/path/to/recordings/manifest.jsonl \
   dataset.window_s=0.64 \
   dataset.hop_s=0.32
 
-# Prebuilt experiment bundle
+# Override the augmentation preset inside the experiment
 uv run -m noise_detect.train \
+  experiment=robust_session \
   dataset.manifest_path=/path/to/recordings/manifest.jsonl \
-  experiment=light_baseline
+  augment=light
+
+# Longer training
+uv run -m noise_detect.train \
+  experiment=robust_session \
+  dataset.manifest_path=/path/to/recordings/manifest.jsonl \
+  trainer.max_epochs=50
 ```
 
 ### Key parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `trainer.max_epochs` | 20 | Training epochs |
+| `trainer.max_epochs` | 20 | Training epochs (30 under `experiment=robust_session`) |
 | `trainer.precision` | `32` | Mixed-precision mode |
 | `dataset.window_s` | 1.0 | Window size in seconds |
 | `dataset.hop_s` | 0.5 | Hop size in seconds |
 | `dataset.sample_rate` | 32000 | Audio sample rate (Hz) |
 | `features.mel.n_mels` | 64 | Mel bands |
-| `augment` | `none` | Preset: `none`, `light`, `strong` |
+| `augment` | `none` | Preset: `none`, `light`, `strong`, `robust`, `robust_lite` |
+| `experiment` | `null` | `light_baseline` or `robust_session` (recommended) |
 
 ---
 
@@ -167,6 +199,33 @@ uv run -m noise_detect.eval \
   window_metrics=true \
   window_preds_csv=predictions.csv
 ```
+
+**Error audit** — print a per-session / per-day accuracy breakdown plus the worst files by FP and FN count. Off by default (keeps normal eval output compact); flip it on when debugging a regression or deciding where to collect more data:
+
+```bash
+uv run -m noise_detect.eval \
+  checkpoint=runs/<timestamp>/checkpoints/best.ckpt \
+  dataset.manifest_path=/path/to/recordings/manifest.jsonl \
+  split=test \
+  calibrate=false \
+  audit=true
+```
+
+The audit block looks like this, appended after the metrics output:
+
+```
+Error audit (threshold=0.490)
+By day (worst-first):
+  2025-10-26   5502  0.9869  TP=3042 TN=2388 FP=22 FN=50
+  2025-10-24   4113  0.9947  TP=2881 TN=1210 FP=1  FN=21
+  ...
+Top 10 files by FP count:
+   23  xiao_esp32s3_1775956737_c172_off_chunk000.wav
+   17  xiao_esp32s3_1761522227_c073_off_chunk000.wav
+  ...
+```
+
+It requires filenames with the 10-digit session timestamp (windows without one are skipped and counted). Tune `audit_top_n=N` for shorter/longer file lists.
 
 ---
 
@@ -264,7 +323,9 @@ nn/
 
 ## Tips
 
+- **Never trust a random-per-file split.** Use `--split-by session` (default) or `--split-by day` and run `scripts/check_split_integrity.py` after building. A leaky split will report 98–99 % accuracy on data the model has effectively seen.
 - **Calibrate on val, report on test** — don't let the test set leak into threshold selection.
 - **Window size** — try `dataset.window_s` in `{0.64, 0.8, 1.0}`; smaller windows = faster on-device inference.
-- **Augmentation** — start with `augment=light`; escalate to `strong` if training data is limited.
-- **Filename labels** — double-check the manifest summary; anything without a clear `on`/`off` token is skipped.
+- **Augmentation** — for the pump task, `experiment=robust_session` (which uses `augment=robust_lite`) is what we've validated. Plain `augment=light` is fine too; `augment=robust` is heavier and starts to overwhelm the small `[16,32,64]` model's capacity.
+- **Debug regressions with `audit=true`** — the per-session / per-day accuracy breakdown tells you whether errors cluster in one hard session (label noise, specific acoustic condition) or are spread across the whole split (a real generalization gap).
+- **Filename labels** — double-check the manifest summary; anything without a clear `on`/`off` token is skipped, and `_canceled` / `_timeout` / `_undefined` are excluded by default.

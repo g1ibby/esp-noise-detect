@@ -2,13 +2,123 @@ from __future__ import annotations
 
 import csv
 import json
+import re
+from collections import defaultdict
 from dataclasses import asdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
 import torch
 import hydra
 from omegaconf import DictConfig, OmegaConf
+
+
+_AUDIT_SESSION_RE = re.compile(r"_(\d{10})_")
+
+
+def _audit_key_of(path: str) -> tuple[Optional[int], Optional[str]]:
+    """Extract (session_ts, day) from a filename like
+    xiao_esp32s3_<ts>_c000_off_chunk000.wav. Returns (None, None) if the
+    filename doesn't match — such windows are simply skipped in the audit."""
+    name = Path(path).name
+    m = _AUDIT_SESSION_RE.search(name)
+    if not m:
+        return None, None
+    ts = int(m.group(1))
+    day = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+    return ts, day
+
+
+def _error_audit(
+    files: list[str],
+    probs: list[float],
+    labels: list[int],
+    threshold: float,
+    top_n: int = 10,
+) -> None:
+    """Group window-level predictions by session and day; print accuracy per
+    group (worst-first) and the top-N worst files by FP and FN counts.
+
+    Meant for debugging regressions — helps see whether a bad run's errors
+    cluster on one hard session or are spread across the whole split.
+    """
+    if not files:
+        print("[audit] no window data available (set window_metrics: true)")
+        return
+
+    per_session_tp: Dict[int, int] = defaultdict(int)
+    per_session_tn: Dict[int, int] = defaultdict(int)
+    per_session_fp: Dict[int, int] = defaultdict(int)
+    per_session_fn: Dict[int, int] = defaultdict(int)
+    per_day_tp: Dict[str, int] = defaultdict(int)
+    per_day_tn: Dict[str, int] = defaultdict(int)
+    per_day_fp: Dict[str, int] = defaultdict(int)
+    per_day_fn: Dict[str, int] = defaultdict(int)
+    per_file_fp: Dict[str, int] = defaultdict(int)
+    per_file_fn: Dict[str, int] = defaultdict(int)
+    skipped_no_ts = 0
+
+    for f, p, y in zip(files, probs, labels):
+        pred = 1 if p >= threshold else 0
+        ts, day = _audit_key_of(f)
+        if ts is None or day is None:
+            skipped_no_ts += 1
+            continue
+        if pred == 1 and y == 1:
+            per_session_tp[ts] += 1
+            per_day_tp[day] += 1
+        elif pred == 0 and y == 0:
+            per_session_tn[ts] += 1
+            per_day_tn[day] += 1
+        elif pred == 1 and y == 0:
+            per_session_fp[ts] += 1
+            per_day_fp[day] += 1
+            per_file_fp[f] += 1
+        else:  # pred == 0 and y == 1
+            per_session_fn[ts] += 1
+            per_day_fn[day] += 1
+            per_file_fn[f] += 1
+
+    print("")
+    print("=" * 72)
+    print(f"Error audit (threshold={threshold:.3f})")
+    if skipped_no_ts:
+        print(f"  skipped {skipped_no_ts} windows whose filename has no session timestamp")
+    print("=" * 72)
+
+    def _group_rows(keys, tp, tn, fp, fn) -> list[tuple]:
+        rows = []
+        for k in keys:
+            n = tp[k] + tn[k] + fp[k] + fn[k]
+            acc = (tp[k] + tn[k]) / max(n, 1)
+            rows.append((k, n, acc, tp[k], tn[k], fp[k], fn[k]))
+        # worst-accuracy first; ties broken by group size descending
+        rows.sort(key=lambda r: (r[2], -r[1]))
+        return rows
+
+    session_keys = set(per_session_tp) | set(per_session_tn) | set(per_session_fp) | set(per_session_fn)
+    day_keys = set(per_day_tp) | set(per_day_tn) | set(per_day_fp) | set(per_day_fn)
+
+    print("\nBy day (worst-first):")
+    print(f"  {'day':<12} {'n':>5} {'acc':>7}  TP TN FP FN")
+    for k, n, acc, tp_, tn_, fp_, fn_ in _group_rows(day_keys, per_day_tp, per_day_tn, per_day_fp, per_day_fn):
+        print(f"  {k:<12} {n:>5} {acc:>7.4f}  {tp_} {tn_} {fp_} {fn_}")
+
+    print("\nBy session (worst-first, up to 15):")
+    print(f"  {'session_ts':>12} {'n':>5} {'acc':>7}  TP TN FP FN")
+    for k, n, acc, tp_, tn_, fp_, fn_ in _group_rows(session_keys, per_session_tp, per_session_tn, per_session_fp, per_session_fn)[:15]:
+        print(f"  {k:>12} {n:>5} {acc:>7.4f}  {tp_} {tn_} {fp_} {fn_}")
+
+    if per_file_fp:
+        print(f"\nTop {top_n} files by FP count:")
+        for f, c in sorted(per_file_fp.items(), key=lambda kv: -kv[1])[:top_n]:
+            print(f"  {c:>4}  {Path(f).name}")
+    if per_file_fn:
+        print(f"\nTop {top_n} files by FN count:")
+        for f, c in sorted(per_file_fn.items(), key=lambda kv: -kv[1])[:top_n]:
+            print(f"  {c:>4}  {Path(f).name}")
+    print("=" * 72)
 
 from noise_detect.config import (
     DatasetConfig,
@@ -136,6 +246,8 @@ def evaluate(cfg: DictConfig) -> int:
     eval_seed = int(d.get("seed", 42))
     window_metrics = bool(d.get("window_metrics", False))
     window_preds_csv = d.get("window_preds_csv")
+    audit = bool(d.get("audit", False))
+    audit_top_n = int(d.get("audit_top_n", 10))
 
     split = str(d.get("split", "val"))
     aggregate = str(d.get("aggregate", "mean"))
@@ -157,7 +269,11 @@ def evaluate(cfg: DictConfig) -> int:
     # Accumulate per-file probabilities
     probs_by_file: dict[str, list[float]] = {}
     label_by_file: dict[str, int] = {}
-    collect_windows = window_metrics or (isinstance(window_preds_csv, str) and window_preds_csv)
+    collect_windows = (
+        window_metrics
+        or audit
+        or (isinstance(window_preds_csv, str) and window_preds_csv)
+    )
     window_probs: list[float] = []
     window_labels: list[int] = []
     window_files: list[str] = []
@@ -303,6 +419,21 @@ def evaluate(cfg: DictConfig) -> int:
                     }
                 )
         print(f"Wrote window predictions CSV to {out_w}")
+
+    # Opt-in per-session / per-day error audit. Requires window-level data,
+    # which we already have when audit or window_metrics was set (see
+    # `collect_windows` above).
+    if audit:
+        if not window_files:
+            print("[audit] no window data collected — enable audit/window_metrics")
+        else:
+            _error_audit(
+                window_files,
+                window_probs,
+                window_labels,
+                float(threshold),
+                top_n=audit_top_n,
+            )
 
     # Final summary block
     print("")

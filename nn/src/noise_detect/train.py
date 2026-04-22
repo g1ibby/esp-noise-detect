@@ -7,7 +7,11 @@ from typing import Any
 
 import torch
 from lightning import LightningModule, Trainer, seed_everything
-from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
+from lightning.pytorch.callbacks import (
+    EarlyStopping,
+    LearningRateMonitor,
+    ModelCheckpoint,
+)
 from torch import Tensor, nn
 
 import hydra
@@ -130,7 +134,9 @@ class LitTinyConv(LightningModule):
             )
         else:
             optimizer = torch.optim.AdamW(
-                self.parameters(), lr=self.optim_cfg.lr, weight_decay=self.optim_cfg.weight_decay
+                self.parameters(),
+                lr=self.optim_cfg.lr,
+                weight_decay=self.optim_cfg.weight_decay,
             )
         if self.sched_cfg.name == "cosine":
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -165,8 +171,14 @@ def _to_train_config(dc: DictConfig) -> TrainAppConfig:  # type: ignore[name-def
 
 def _build_trainer(cfg: TrainerConfig) -> Trainer:
     callbacks = [
-        ModelCheckpoint(monitor="val_f1_macro", mode="max", save_top_k=1, filename="best", dirpath="checkpoints"),
-        EarlyStopping(monitor="val_f1_macro", mode="max", patience=8),
+        ModelCheckpoint(
+            monitor="val_f1_macro",
+            mode="max",
+            save_top_k=1,
+            filename="best",
+            dirpath="checkpoints",
+        ),
+        EarlyStopping(monitor="val_f1_macro", mode="max", patience=5),
         LearningRateMonitor(logging_interval="epoch"),
     ]
     trainer = Trainer(
@@ -210,7 +222,9 @@ def _run_post_train_eval(best_ckpt: Path, tc: TrainAppConfig) -> None:
 def _hydra_entry(cfg: DictConfig) -> int:
     tc = _to_train_config(cfg)
     seed_everything(tc.trainer.seed, workers=True)
-    dm = PumpAudioDataModule(tc.dataset, tc.dm, tc.augment, tc.trainer.seed, mel_cfg=tc.mel)
+    dm = PumpAudioDataModule(
+        tc.dataset, tc.dm, tc.augment, tc.trainer.seed, mel_cfg=tc.mel
+    )
     model = LitTinyConv(tc.dataset, tc.mel, tc.model, tc.optim, tc.sched)
     trainer = _build_trainer(tc.trainer)
     trainer.fit(model, datamodule=dm)
@@ -249,12 +263,19 @@ def _hydra_entry(cfg: DictConfig) -> int:
         print(f"  Evaluate on test : uv run -m noise_detect.eval \\")
         print(f"                       checkpoint={best_ckpt_path} \\")
         if tc.dataset.manifest_path:
-            print(f"                       dataset.manifest_path={tc.dataset.manifest_path} \\")
+            print(
+                f"                       dataset.manifest_path={tc.dataset.manifest_path} \\"
+            )
         print(f"                       split=test calibrate=false")
         print(f"  Export .espdl    : uv run -m noise_detect.export \\")
-        print(f"                       checkpoint={best_ckpt_path}" + (" \\" if tc.dataset.manifest_path else ""))
+        print(
+            f"                       checkpoint={best_ckpt_path}"
+            + (" \\" if tc.dataset.manifest_path else "")
+        )
         if tc.dataset.manifest_path:
-            print(f"                       dataset.manifest_path={tc.dataset.manifest_path}")
+            print(
+                f"                       dataset.manifest_path={tc.dataset.manifest_path}"
+            )
         print("=" * 72)
     return 0
 

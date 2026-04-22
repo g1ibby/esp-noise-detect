@@ -118,9 +118,10 @@ class PumpAudioDataModule(LightningDataModule):
 
     def _setup_waveform(self) -> None:
         items = self._manifest()
-        train_aug = build_pipeline(self.augment_cfg.train)
-        val_aug = build_pipeline(self.augment_cfg.val)
-        test_aug = build_pipeline(self.augment_cfg.test)
+        sr = self.ds_cfg.sample_rate
+        train_aug = build_pipeline(self.augment_cfg.train, sample_rate=sr)
+        val_aug = build_pipeline(self.augment_cfg.val, sample_rate=sr)
+        test_aug = build_pipeline(self.augment_cfg.test, sample_rate=sr)
         self._train = WindowedAudioDataset(
             items, self.ds_cfg, split="train", augmentation=train_aug, base_seed=self.seed,
         )

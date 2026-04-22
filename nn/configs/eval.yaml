@@ -1,10 +1,10 @@
 defaults:
+  - _self_
   - dataset: manifest
   - features: mel
   - model: tinyconv
   - augment: none
   - experiment: null
-  - _self_
 
 hydra:
   run:
@@ -24,8 +24,15 @@ aggregate: mean  # mean|max
 # Decision threshold; if null and calibrate=true, tune on the split
 threshold: null
 calibrate: true
-window_metrics: false
+window_metrics: true
 window_preds_csv: null
+
+# Opt-in error audit: per-session and per-day accuracy breakdown plus the
+# top-N files by FP and FN count. Relies on filenames containing a 10-digit
+# session timestamp (xiao_esp32s3_<ts>_...wav). Off by default so normal
+# eval output stays compact; flip to true when debugging a regression.
+audit: false
+audit_top_n: 10
 
 # Optional outputs
 preds_csv: null
@@ -34,3 +41,12 @@ calibration_json: calibration.json
 
 # Random seed for deterministic augmentation (if enabled)
 seed: 42
+
+# Reuse the dm cache by default; override to dm.use_cache=false when
+# re-evaluating with a freshly rebuilt manifest.
+dm:
+  batch_size: 128
+  num_workers: 4
+  pin_memory: true
+  use_cache: true
+  cache_dir: null

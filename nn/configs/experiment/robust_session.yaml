@@ -1,0 +1,34 @@
+# @package _global_
+# Robust training: requires a session/day-split manifest (build_manifest.py
+# with --split-by session or --split-by day). Uses waveform augmentation to
+# fight the "loud = pump_on" bias observed in leaky-split diagnostics.
+
+defaults:
+  - override /augment: robust_lite
+  - _self_
+
+dm:
+  use_cache: false          # must be false for waveform augs to run
+  batch_size: 128
+  num_workers: 8            # bump to keep MPS fed; augs are the bottleneck
+
+trainer:
+  max_epochs: 30
+  gradient_clip_val: 1.0
+
+dataset:
+  window_s: 1.0
+  hop_s: 0.5
+
+# Keep the baseline capacity [16, 32, 64] to preserve the flash footprint of
+# prior .espdl models (~130 KB). Robust augmentation is doing the heavy
+# lifting for generalization; extra channels aren't needed.
+
+optim:
+  lr: 5.0e-4
+  weight_decay: 1.0e-2
+
+sched:
+  name: cosine
+  t_max: 30
+  min_lr: 1.0e-5
