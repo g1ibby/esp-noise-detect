@@ -4,7 +4,7 @@
 # fight the "loud = pump_on" bias observed in leaky-split diagnostics.
 
 defaults:
-  - override /augment: robust_lite
+  - override /augment: robust
   - _self_
 
 dm:
