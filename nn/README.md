@@ -114,7 +114,7 @@ uv run -m noise_detect.train \
   dataset.manifest_path=/path/to/recordings/manifest.jsonl
 ```
 
-This bundles what we've validated as best for this task: the `robust_lite` augmentation profile (gain / colored noise / high+low-pass / time masking — tuned to keep a small `[16, 32, 64]`-channel model generalizing well), cosine LR, 30 epochs with early stopping, and `dm.use_cache: false` so waveform augmentation actually runs (the cached-mel path silently skips it). Checkpoints land in `runs/<timestamp>/checkpoints/best.ckpt`.
+This bundles what we've validated as best for this task: the `robust` augmentation profile (gain / colored noise / high+low-pass / time masking — tuned to keep a small `[16, 32, 64]`-channel model generalizing well), cosine LR, 30 epochs with early stopping, and `dm.use_cache: false` so waveform augmentation actually runs (the cached-mel path silently skips it). Checkpoints land in `runs/<timestamp>/checkpoints/best.ckpt`.
 
 ### Minimal alternative
 
