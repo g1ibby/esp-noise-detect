@@ -1,0 +1,36 @@
+[package]
+name = "cubek-resample"
+description = "Rational-ratio sinc-windowed FIR resampler, ported from Julius"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+# Runtime-generic over `cubecl::Runtime`, tested against wgpu-Metal. See
+# MIGRATION_PLAN.md §2.1 step 3 and SPIKE_FINDINGS.md.
+#
+# The algorithm is a straight port of `julius.resample.ResampleFrac`. Host-
+# side we precompute the sinc / cos² kernel bank; on device we run a single
+# CubeCL kernel that does (replicate-pad → strided dot-product → interleave)
+# in one pass — no Burn conv1d dependency.
+
+[features]
+default = ["std"]
+std = ["cubecl/std", "cubecl/stdlib"]
+
+# Test-only backend selectors. Pick exactly one at `cargo test` time:
+#   cargo test --features test-metal   (Apple Silicon)
+#   cargo test --features test-cuda    (Linux NVIDIA, needs CUDA Toolkit)
+#   cargo test --features test-vulkan  (Linux AMD / fallback)
+#   cargo test --features test-cpu     (sanity runs, no GPU required)
+test-metal  = ["cubecl/wgpu-msl"]
+test-vulkan = ["cubecl/wgpu-spirv"]
+test-cuda   = ["cubecl/cuda"]
+test-cpu    = ["cubecl/cpu"]
+
+[dependencies]
+cubecl = { workspace = true }
+
+[dev-dependencies]
+# `test-runtime` activates cubecl::TestRuntime scaffolding; the actual
+# backend is chosen by --features test-{metal,vulkan,cuda,cpu} above.
+cubecl = { workspace = true, features = ["std", "stdlib", "test-runtime"] }

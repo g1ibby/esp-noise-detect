@@ -1,0 +1,47 @@
+[package]
+name = "burn-audiomentations"
+description = "Waveform augmentation transforms for Burn / CubeCL audio pipelines"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+# Step 5 of MIGRATION_PLAN.md. Assembles the cubek-* kernel crates into the
+# waveform transforms required by `nn/configs/augment/robust.yaml` (minus
+# PitchShift — that lands in step 6 together with cubek-stft +
+# cubek-phasevocoder + cubek-resample).
+#
+# Like every other crate in `crates/`, the public surface is runtime-generic
+# over `cubecl::Runtime` and operates on `cubecl::std::tensor::TensorHandle`.
+# The `noise-detect` project crate is the place where Burn tensors are
+# handed down to this layer via the zero-copy bridge documented in
+# SPIKE_FINDINGS.md §4 (`tensor.into_primitive().tensor()` →
+# `CubeTensor::handle` → `TensorHandle`).
+
+[features]
+default = ["std"]
+std = ["cubecl/std", "cubecl/stdlib"]
+
+# Test-only backend selectors. Pick exactly one at `cargo test` time:
+#   cargo test --features test-metal   (Apple Silicon)
+#   cargo test --features test-cuda    (Linux NVIDIA, needs CUDA Toolkit)
+#   cargo test --features test-vulkan  (Linux AMD / fallback)
+#   cargo test --features test-cpu     (sanity runs, no GPU required)
+test-metal  = ["cubecl/wgpu-msl"]
+test-vulkan = ["cubecl/wgpu-spirv"]
+test-cuda   = ["cubecl/cuda"]
+test-cpu    = ["cubecl/cpu"]
+
+[dependencies]
+cubecl = { workspace = true }
+cubek-fft = { workspace = true }
+cubek-phasevocoder = { workspace = true }
+cubek-random = { workspace = true }
+cubek-resample = { workspace = true }
+cubek-sinc-filter = { workspace = true }
+cubek-stft = { workspace = true }
+rand = { version = "0.9", default-features = false, features = ["std", "std_rng"] }
+
+[dev-dependencies]
+# `test-runtime` activates cubecl::TestRuntime scaffolding; the actual
+# backend is chosen by --features test-{metal,vulkan,cuda,cpu} above.
+cubecl = { workspace = true, features = ["std", "stdlib", "test-runtime"] }

@@ -1,0 +1,47 @@
+[package]
+authors = ["Sublime12", "louisfd"]
+categories = ["science","mathematics", "algorithms"]
+description = "CubeK: Fast Fourier Transform"
+edition.workspace = true
+keywords = []
+license.workspace = true
+name = "cubek-fft"
+readme.workspace = true
+repository = "https://github.com/tracel-ai/cubek/tree/main/crates/cubek-fft"
+version.workspace = true
+
+[features]
+default = ["std", "cubecl/default"]
+std = ["cubecl/std"]
+
+full = ["extended"]
+extended = []
+
+# Test-only backend selectors. Pick exactly one at `cargo test` time:
+#   cargo test --features test-metal   (Apple Silicon)
+#   cargo test --features test-cuda    (Linux NVIDIA, needs CUDA Toolkit)
+#   cargo test --features test-vulkan  (Linux AMD / fallback)
+#   cargo test --features test-cpu     (sanity runs, no GPU required)
+test-metal  = ["cubecl/wgpu-msl"]
+test-vulkan = ["cubecl/wgpu-spirv"]
+test-cuda   = ["cubecl/cuda"]
+test-cpu    = ["cubecl/cpu"]
+
+[dependencies]
+cubecl = { workspace = true }
+cubek-test-utils = { workspace = true }
+
+[dev-dependencies]
+num-complex = "0.4.6"
+# `test-runtime` activates cubecl::TestRuntime scaffolding; the actual
+# backend is chosen by --features test-{metal,vulkan,cuda,cpu} above.
+cubecl = { workspace = true, features = ["std", "stdlib", "test-runtime"] }
+cubecl-common = { workspace = true }
+
+[[example]]
+name = "bench"
+path = "examples/bench.rs"
+
+[[example]]
+name = "size_probe"
+path = "examples/size_probe.rs"

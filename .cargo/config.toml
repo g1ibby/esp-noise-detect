@@ -1,0 +1,25 @@
+# Cargo aliases for the multi-backend training workspace. The explicit
+# `--no-default-features --features std,<backend>` form keeps the Mac
+# (Metal) and Linux (native CUDA) invocations symmetric and prevents
+# wgpu from leaking in transitively when we build the CUDA path.
+#
+# See nn-rs/README.md and MULTI_BACKEND_TASK.md for the rationale and the
+# full feature flag table. Aliases use TOML array syntax so the
+# `--features` value is delivered as a single argv entry (single quotes
+# inside an alias *string* are passed through to cargo verbatim and
+# break feature resolution).
+
+[alias]
+# --- Build / train (Mac, Metal) ---
+build-mac = ["build", "--release", "-p", "nn-rs", "--no-default-features", "--features", "std,metal", "--bin", "train"]
+train-mac = ["run",   "--release", "-p", "nn-rs", "--no-default-features", "--features", "std,metal", "--bin", "train"]
+
+# --- Build / train (Linux NVIDIA, native CUDA) ---
+build-cuda = ["build", "--release", "-p", "nn-rs", "--no-default-features", "--features", "std,cuda", "--bin", "train"]
+train-cuda = ["run",   "--release", "-p", "nn-rs", "--no-default-features", "--features", "std,cuda", "--bin", "train"]
+
+# --- Workspace tests ---
+test-mac    = ["test", "--workspace", "--no-default-features", "--features", "std,test-metal"]
+test-cuda   = ["test", "--workspace", "--no-default-features", "--features", "std,test-cuda"]
+test-vulkan = ["test", "--workspace", "--no-default-features", "--features", "std,test-vulkan"]
+test-cpu    = ["test", "--workspace", "--no-default-features", "--features", "std,test-cpu"]

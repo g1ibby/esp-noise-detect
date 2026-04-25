@@ -1,0 +1,174 @@
+# SkyPilot task for the Rust (Burn + CubeCL) training pipeline on RunPod.
+#
+# Remote pod runs ONLY the Rust-side steps — train → eval →
+# export_weights. The Python Burn-to-ONNX bridge + esp-ppq Docker
+# quantizer stay on the developer laptop (see `scripts/burn_to_espdl.sh`),
+# which keeps the pod image minimal and avoids nested-Docker surprises.
+#
+# Usage — run from the repo root (where this yaml + .skyignore live):
+#
+#   sky launch -c nn-rs-pump sky.yaml -y
+#
+# IMPORTANT: launch from the directory that owns this yaml. SkyPilot
+# resolves `workdir:` relative to the CWD of `sky launch`, not the
+# YAML file — running from anywhere else would upload the wrong tree
+# and bypass the `.skyignore` we committed next to this file.
+#
+# The recordings folder is passed via the `envs:` block below. Set it
+# per-invocation — either via CLI flag or shell env:
+#
+#   sky launch -c nn-rs-pump sky.yaml -y \
+#       --env RECORDINGS_PATH=/abs/path/to/voicy/recordings
+#
+#   # or (shell env picked up automatically when declared in envs:)
+#   export RECORDINGS_PATH=/abs/path/to/voicy/recordings
+#   sky launch -c nn-rs-pump sky.yaml -y
+#
+# After it finishes, pull the checkpoint + metrics + safetensors back
+# (SkyPilot 0.12 lacks `rsync-down`; use plain rsync via the SSH alias
+# SkyPilot registers in ~/.ssh/config):
+#
+#   rsync -avz --progress nn-rs-pump:sky_workdir/runs/robust_session/ \
+#       /tmp/nn-rs-robust-cuda/
+#   sky down nn-rs-pump -y
+#
+# Then run the local ONNX + .espdl step (requires Docker on the laptop):
+#
+#   scripts/burn_to_espdl.sh \
+#     --checkpoint /tmp/nn-rs-robust-cuda/checkpoints/best.mpk \
+#     --manifest   /abs/path/to/voicy/recordings/manifest.jsonl \
+#     --out-dir    /tmp/nn-rs-robust-cuda/export
+#
+# Re-run training on the SAME cluster (skips re-upload + cargo cold build):
+#
+#   sky exec nn-rs-pump sky.yaml
+
+name: nn-rs-pump-train
+
+envs:
+  # Local path that seeds the persistent R2 dataset bucket on first
+  # launch. Declared here so SkyPilot substitutes `${RECORDINGS_PATH}`
+  # into `file_mounts.source` below. No default — must be provided via
+  # `sky launch --env RECORDINGS_PATH=…` or a shell env of the same
+  # name. After the first run the R2 bucket is populated and further
+  # launches skip the upload (SkyPilot diffs source vs bucket).
+  RECORDINGS_PATH:
+
+resources:
+  infra: runpod
+  use_spot: true            # preemption is fine — 3-epoch smoke completes in minutes
+  disk_size: 60             # GB; _reference + recordings + cargo target
+  any_of:
+    - accelerators: RTX4090:1           # $0.34/hr spot, widely available
+    - accelerators: RTXPRO4500:1        # $0.27/hr spot when it frees up
+    - accelerators: A100-80GB-SXM:1     # last resort
+
+workdir: .
+
+file_mounts:
+  # Cloudflare R2 dataset bucket. First launch uploads the local
+  # recordings once (slow, laptop → R2). Subsequent launches pull
+  # server-to-server (fast, zero egress).
+  /data:
+    name: pump-dataset
+    source: ${RECORDINGS_PATH}
+    store: r2
+    mode: COPY
+    persistent: true
+
+setup: |
+  set -euo pipefail
+
+  # ---- CUDA sanity ------------------------------------------------
+  # RunPod's pytorch images ship CUDA under /usr/local/cuda; some
+  # images only expose runtime libs. `nn-rs` (via cubecl-cuda) needs
+  # nvrtc + nvcc at runtime; fall back to installing the toolkit if
+  # nvcc is missing.
+  export CUDA_HOME="${CUDA_HOME:-/usr/local/cuda}"
+  export PATH="$CUDA_HOME/bin:$PATH"
+  export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
+  nvidia-smi
+  if ! command -v nvcc >/dev/null 2>&1; then
+    echo "nvcc missing — registering NVIDIA apt repo and installing toolkit"
+    # Pick ubuntu2204/ubuntu2004 based on /etc/os-release; RunPod's
+    # pytorch images are jammy but the switch keeps this portable.
+    . /etc/os-release
+    UBU="ubuntu${VERSION_ID//./}"
+    KEYRING=/tmp/cuda-keyring.deb
+    curl -fsSL -o "$KEYRING" \
+      "https://developer.download.nvidia.com/compute/cuda/repos/${UBU}/x86_64/cuda-keyring_1.1-1_all.deb"
+    sudo dpkg -i "$KEYRING"
+    sudo apt-get update
+    sudo apt-get install -y --no-install-recommends \
+      cuda-nvcc-12-4 cuda-nvrtc-dev-12-4 cuda-cudart-dev-12-4
+  fi
+  nvcc --version
+
+  # ---- Rust toolchain (stable) -----------------------------------
+  if ! command -v rustup >/dev/null 2>&1; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+      sh -s -- -y --default-toolchain stable --profile minimal
+  fi
+  # shellcheck disable=SC1091
+  source "$HOME/.cargo/env"
+  rustc --version
+
+  # ---- Prewarm cargo build (so `sky exec` re-runs are fast) ------
+  export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
+  cargo build --release -p nn-rs --no-default-features \
+      --features std,cuda --bins
+
+run: |
+  set -euo pipefail
+  # shellcheck disable=SC1091
+  source "$HOME/.cargo/env"
+  export CUDA_HOME="${CUDA_HOME:-/usr/local/cuda}"
+  export PATH="$CUDA_HOME/bin:$HOME/.cargo/bin:$PATH"
+  export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
+
+  nvidia-smi
+
+  ARTIFACT_DIR="runs/robust_session"
+  EXPORT_DIR="${ARTIFACT_DIR}/export"
+  CKPT="${ARTIFACT_DIR}/checkpoints/best"
+
+  # --[1/3] Train --------------------------------------------------
+  # max_epochs: 3 comes from the YAML (mirrors the local smoke run at
+  # /tmp/nn-rs-robust-smoke).
+  cargo run --release -p nn-rs --no-default-features \
+      --features std,cuda --bin train -- \
+      --config       nn-rs/configs/robust_session.yaml \
+      --manifest     /data/manifest.jsonl \
+      --artifact-dir "${ARTIFACT_DIR}"
+
+  # --[2/3] Eval on val (metrics.json / calibration.json / threshold.json)
+  cargo run --release -p nn-rs --no-default-features \
+      --features std,cuda --bin eval -- \
+      --config     nn-rs/configs/robust_session.yaml \
+      --checkpoint "${CKPT}" \
+      --manifest   /data/manifest.jsonl \
+      --split      val
+
+  # --[3/3] Burn → safetensors + parity logits ---------------------
+  # The .safetensors + logits_rust.json are the hand-off to the laptop,
+  # which runs `scripts/burn_to_espdl.sh` (ONNX + esp-ppq Docker → .espdl).
+  mkdir -p "${EXPORT_DIR}"
+  cargo run --release -p nn-rs --no-default-features \
+      --features std,cuda --bin export_weights -- \
+      --config        nn-rs/configs/robust_session.yaml \
+      --checkpoint    "${CKPT}" \
+      --out           "${EXPORT_DIR}/tinyconv.safetensors" \
+      --verify-logits "${EXPORT_DIR}/logits_rust.json"
+
+  echo ""
+  echo "============================================================"
+  echo "Rust training + export complete. Artefacts:"
+  echo "  ${ARTIFACT_DIR}/checkpoints/  (best.mpk + metrics.json etc.)"
+  echo "  ${EXPORT_DIR}/               (tinyconv.safetensors, logits_rust.json)"
+  ls -la "${ARTIFACT_DIR}/checkpoints" "${EXPORT_DIR}"
+  echo ""
+  echo "Pull back to laptop:"
+  echo "  rsync -avz --progress nn-rs-pump:sky_workdir/${ARTIFACT_DIR}/ /tmp/nn-rs-robust-cuda/"
+  echo "  scripts/burn_to_espdl.sh --checkpoint /tmp/nn-rs-robust-cuda/checkpoints/best.mpk \\"
+  echo "      --manifest <recordings>/manifest.jsonl --out-dir /tmp/nn-rs-robust-cuda/export"
+  echo "============================================================"

@@ -1,0 +1,92 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/cubek-fft",
+    "crates/cubek-stft",
+    "crates/cubek-phasevocoder",
+    "crates/cubek-resample",
+    "crates/cubek-sinc-filter",
+    "crates/burn-audiomentations",
+    "nn-rs",
+]
+exclude = [
+    "firmware",
+    "host-tools",
+    "wire-protocol",
+    "nn",
+    "_reference",
+]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+version = "0.1.0"
+
+# ----------------------------------------------------------------------------
+# Burn + CubeCL + CubeK alignment.
+#
+# We pin the exact commits that burn itself pins for cubecl and cubek, so
+# Cargo resolves a single instance of each across the whole build:
+#
+#   burn    -> c94010a65f2ce9d24938c610d9cf8c13ecd81c1f (v0.21.0-pre.3 + follow-ups)
+#   cubecl  -> 586601e66be38261e1cb99eaeff9df46df149756 (v0.10.0-pre.3)
+#   cubek   -> 98a357a8414d3ebb57a5d64c202649a5f48b2d7e (v0.2.0-pre.3)
+#
+# `_reference/` is a local, read-only checkout of each repo at the same
+# commits — it is excluded from the workspace and kept only as a
+# convenience for reading upstream sources. Nothing in the build refers
+# to it.
+#
+# The `[patch."https://github.com/tracel-ai/cubek"]` block below shadows
+# upstream `cubek-fft` with our workspace crate so anything that
+# transitively enables `cubek/fft` uses our fork.
+# ----------------------------------------------------------------------------
+
+[workspace.dependencies]
+# Burn
+burn        = { git = "https://github.com/tracel-ai/burn", rev = "c94010a65f2ce9d24938c610d9cf8c13ecd81c1f", default-features = false }
+burn-wgpu   = { git = "https://github.com/tracel-ai/burn", rev = "c94010a65f2ce9d24938c610d9cf8c13ecd81c1f", default-features = false }
+burn-cuda   = { git = "https://github.com/tracel-ai/burn", rev = "c94010a65f2ce9d24938c610d9cf8c13ecd81c1f", default-features = false }
+burn-cubecl = { git = "https://github.com/tracel-ai/burn", rev = "c94010a65f2ce9d24938c610d9cf8c13ecd81c1f", default-features = false }
+burn-tensor = { git = "https://github.com/tracel-ai/burn", rev = "c94010a65f2ce9d24938c610d9cf8c13ecd81c1f", default-features = false }
+burn-store  = { git = "https://github.com/tracel-ai/burn", rev = "c94010a65f2ce9d24938c610d9cf8c13ecd81c1f", default-features = false }
+
+# CubeCL
+cubecl        = { git = "https://github.com/tracel-ai/cubecl", rev = "586601e66be38261e1cb99eaeff9df46df149756", default-features = false }
+cubecl-common = { git = "https://github.com/tracel-ai/cubecl", rev = "586601e66be38261e1cb99eaeff9df46df149756", default-features = false }
+cubecl-cuda   = { git = "https://github.com/tracel-ai/cubecl", rev = "586601e66be38261e1cb99eaeff9df46df149756", default-features = false }
+cubecl-std    = { git = "https://github.com/tracel-ai/cubecl", rev = "586601e66be38261e1cb99eaeff9df46df149756", default-features = false }
+
+# CubeK (upstream crates). Our own cubek-fft lives below.
+cubek-random     = { git = "https://github.com/tracel-ai/cubek", rev = "98a357a8414d3ebb57a5d64c202649a5f48b2d7e", default-features = false }
+cubek-test-utils = { git = "https://github.com/tracel-ai/cubek", rev = "98a357a8414d3ebb57a5d64c202649a5f48b2d7e", default-features = false }
+
+# Our own kernel crates (see crates/).
+cubek-fft = { path = "crates/cubek-fft", default-features = false }
+cubek-stft = { path = "crates/cubek-stft", default-features = false }
+cubek-phasevocoder = { path = "crates/cubek-phasevocoder", default-features = false }
+cubek-resample = { path = "crates/cubek-resample", default-features = false }
+cubek-sinc-filter = { path = "crates/cubek-sinc-filter", default-features = false }
+burn-audiomentations = { path = "crates/burn-audiomentations", default-features = false }
+nn-rs = { path = "nn-rs", default-features = false }
+
+# Host-side dependencies
+bytemuck = "1.25"
+half = { version = "2.5", default-features = false }
+rustfft = "6.2"
+
+# Shadow upstream cubek-fft with our workspace crate. Burn's workspace
+# pulls cubek at rev 98a357a, and cubek's facade (`cubek/crates/cubek`)
+# declares `cubek-fft` as an optional relative-path dep. Without this
+# patch, any transitive activation of `cubek/fft` would build the
+# upstream cubek-fft alongside our fork — two copies of every type,
+# and no direct interop with Burn's internal cubek usage.
+[patch."https://github.com/tracel-ai/cubek"]
+cubek-fft = { path = "crates/cubek-fft" }
+
+[profile.dev]
+opt-level = 0
+debug = 1
+
+[profile.dev.build-override]
+opt-level = 3

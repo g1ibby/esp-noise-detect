@@ -1,0 +1,42 @@
+[package]
+name = "cubek-phasevocoder"
+description = "Phase-locked phase vocoder time-stretch for STFT spectrograms"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+# Direct port of torchaudio.functional.phase_vocoder. Runtime-generic over
+# cubecl::Runtime, mirroring the shape of cubek-fft / cubek-stft. See
+# MIGRATION_PLAN.md §2.1 step 2 and SPIKE_FINDINGS.md.
+
+[features]
+# stdlib is required for `cubecl::std::tensor::TensorHandle` which is part
+# of the public API. cubek-stft gets stdlib transitively through cubek-fft;
+# we depend on neither so we enable it directly.
+default = ["std"]
+std = ["cubecl/std", "cubecl/stdlib"]
+
+# Test-only backend selectors. Pick exactly one at `cargo test` time:
+#   cargo test --features test-metal   (Apple Silicon)
+#   cargo test --features test-cuda    (Linux NVIDIA, needs CUDA Toolkit)
+#   cargo test --features test-vulkan  (Linux AMD / fallback)
+#   cargo test --features test-cpu     (sanity runs, no GPU required)
+test-metal  = ["cubecl/wgpu-msl"]
+test-vulkan = ["cubecl/wgpu-spirv"]
+test-cuda   = ["cubecl/cuda"]
+test-cpu    = ["cubecl/cpu"]
+
+[dependencies]
+cubecl = { workspace = true }
+
+[dev-dependencies]
+# `test-runtime` activates cubecl::TestRuntime scaffolding; the actual
+# backend is chosen by --features test-{metal,vulkan,cuda,cpu} above.
+cubecl = { workspace = true, features = ["std", "stdlib", "test-runtime"] }
+# The end-to-end pitch-shift bench (`examples/bench.rs`) measures the full
+# STFT -> phase-vocoder -> iSTFT -> resample pipeline, so it needs to call
+# the neighbouring crates directly. It also drives `rfft`/`irfft` by hand to
+# isolate the FFT cost from the framing/overlap-add cost in cubek-stft.
+cubek-stft = { workspace = true, default-features = true }
+cubek-resample = { workspace = true, default-features = true }
+cubek-fft = { workspace = true, default-features = true }

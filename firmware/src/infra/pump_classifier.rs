@@ -21,7 +21,7 @@ use crate::{
 extern crate edgedl_macros;
 
 // Bind the model
-#[edgedl_macros::espdl_model(path = "./models/noise_model_5.espdl")]
+#[edgedl_macros::espdl_model(path = "./models/noise_model_6.espdl")]
 struct __ModelBind;
 
 // Constants from the noise example/model

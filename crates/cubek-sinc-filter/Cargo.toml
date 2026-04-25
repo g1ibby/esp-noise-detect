@@ -1,0 +1,42 @@
+[package]
+name = "cubek-sinc-filter"
+description = "Windowed-sinc FIR low-pass / high-pass filter, ported from Julius"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+# Runtime-generic over `cubecl::Runtime`, tested against wgpu-Metal. See
+# MIGRATION_PLAN.md §2.1 step 4 and SPIKE_FINDINGS.md.
+#
+# Algorithmic port of `julius.lowpass.LowPassFilters` — half-size derived from
+# the smallest positive cutoff, Hann-windowed sinc, DC-normalized. Host-side
+# we precompute the filter bank for a user-supplied bank of cutoffs (the
+# augmentation layer quantizes a continuous cutoff range into ~32 buckets);
+# on device we run a single CubeCL kernel that does (replicate-pad → FIR
+# conv → optional high-pass subtract) in one pass — no Burn conv1d
+# dependency. FFT-convolution path is intentionally absent for now — direct
+# conv is correct, and FFT is a future perf optimization once the training
+# loop lands (plan §2.1 step 4, flagged as follow-up).
+
+[features]
+default = ["std"]
+std = ["cubecl/std", "cubecl/stdlib"]
+
+# Test-only backend selectors. Pick exactly one at `cargo test` time:
+#   cargo test --features test-metal   (Apple Silicon)
+#   cargo test --features test-cuda    (Linux NVIDIA, needs CUDA Toolkit)
+#   cargo test --features test-vulkan  (Linux AMD / fallback)
+#   cargo test --features test-cpu     (sanity runs, no GPU required)
+test-metal  = ["cubecl/wgpu-msl"]
+test-vulkan = ["cubecl/wgpu-spirv"]
+test-cuda   = ["cubecl/cuda"]
+test-cpu    = ["cubecl/cpu"]
+
+[dependencies]
+cubecl = { workspace = true }
+cubek-fft = { workspace = true }
+
+[dev-dependencies]
+# `test-runtime` activates cubecl::TestRuntime scaffolding; the actual
+# backend is chosen by --features test-{metal,vulkan,cuda,cpu} above.
+cubecl = { workspace = true, features = ["std", "stdlib", "test-runtime"] }

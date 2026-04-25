@@ -1,0 +1,49 @@
+# SkyPilot upload filter — used by `workdir:` uploads when present.
+# Keep this file in sync with what we actually do not want to ship to
+# the remote pod.
+
+# Rust build artefacts.
+target/
+**/target/
+
+# Local read-only checkouts of burn/cubecl/cubek. The Cargo workspace
+# pulls these crates from git at pinned revs, so the pod does not need
+# the source tree.
+_reference/
+
+# Python / venv / caches
+.venv/
+**/.venv/
+**/__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Training outputs — re-created on the pod
+runs/
+nn/runs/
+nn-rs/runs/
+
+# Editor / OS junk
+.DS_Store
+*.swp
+*.bak
+.idea/
+.vscode/
+
+# Secrets
+.env
+.env.*
+firmware/.env
+
+# Subprojects not needed for nn-rs training on the pod
+firmware/
+host-tools/
+wire-protocol/
+hardware/
+tasks/
+# spikes/ stays — the root Cargo.toml lists spikes/backend-check as a
+# workspace member and cargo refuses to resolve without its manifest.
+# Only backend-check exists today (36K); nested target/ is already
+# handled by `**/target/` above.

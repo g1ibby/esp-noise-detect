@@ -52,18 +52,23 @@ fn export_dotenv_vars() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let workspace_root = manifest_dir.parent().unwrap_or(&manifest_dir).to_path_buf();
 
+    // Register rerun triggers for all candidate paths up-front so a later-created
+    // .env invalidates the build-script cache even if none existed on the first run.
+    let manifest_dotenv = manifest_dir.join(".env");
+    let workspace_dotenv = workspace_root.join(".env");
+    println!("cargo:rerun-if-changed={}", manifest_dotenv.display());
+    println!("cargo:rerun-if-changed={}", workspace_dotenv.display());
+
     // Priority: FIRMWARE_DOTENV_PATH > firmware/.env > workspace/.env
     let dotenv_path = env::var("FIRMWARE_DOTENV_PATH")
         .ok()
         .map(PathBuf::from)
         .filter(|p| p.exists())
         .or_else(|| {
-            let p = manifest_dir.join(".env");
-            if p.exists() { Some(p) } else { None }
+            if manifest_dotenv.exists() { Some(manifest_dotenv.clone()) } else { None }
         })
         .or_else(|| {
-            let p = workspace_root.join(".env");
-            if p.exists() { Some(p) } else { None }
+            if workspace_dotenv.exists() { Some(workspace_dotenv.clone()) } else { None }
         });
 
     let mut had_ssid = false;
@@ -160,9 +165,14 @@ fn export_dotenv_vars() {
                 }
             }
         }
+        // Also watch the resolved path (covers FIRMWARE_DOTENV_PATH pointing elsewhere).
         println!("cargo:rerun-if-changed={}", path.display());
     }
     println!("cargo:rerun-if-env-changed=FIRMWARE_DOTENV_PATH");
+    println!("cargo:rerun-if-env-changed=SSID");
+    println!("cargo:rerun-if-env-changed=PASSWORD");
+    println!("cargo:rerun-if-env-changed=SERVER_IP");
+    println!("cargo:rerun-if-env-changed=SERVER_PORT");
 
     // Also consider already-set environment variables in the build environment
     if !had_ssid {

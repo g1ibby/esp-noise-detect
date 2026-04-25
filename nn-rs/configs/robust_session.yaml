@@ -1,0 +1,114 @@
+# Pre-composed robust_session training config for the Rust pipeline.
+#
+# Mirrors the Hydra composition
+#   nn/configs/train.yaml + nn/configs/experiment/robust_session.yaml
+#   + nn/configs/augment/robust.yaml.
+#
+# Every field matches the Python defaults / overrides exactly. The two
+# pipelines can read each other's composed configs, so this file doubles
+# as a sanity check: parse it with both the Rust loader and the Python
+# dataclass loader and confirm they agree.
+#
+# `dataset.manifest_path` is intentionally left unset; the CLI resolves
+# it via `--manifest <path>` or a per-invocation override. Relative
+# paths resolve against the config file's parent directory, matching
+# Hydra's `to_absolute_path`.
+
+dataset:
+  sample_rate: 32000
+  window_s: 1.0
+  hop_s: 0.5
+  class_names: [pump_off, pump_on]
+
+features:
+  n_mels: 64
+  fmin: 50.0
+  n_fft: 1024
+  hop_length_ms: 10.0
+  log: true
+  eps: 1.0e-10
+  normalize: true
+  center: true
+
+model:
+  channels: [16, 32, 64]
+  dropout: 0.0
+
+augment:
+  train:
+    enabled: true
+    shuffle: true
+    same_on_batch: false
+    transforms:
+      - type: gain
+        probability: 0.8
+        params:
+          min_gain_in_db: -12.0
+          max_gain_in_db: 12.0
+      - type: add_colored_noise
+        probability: 0.7
+        params:
+          min_snr_in_db: 0.0
+          max_snr_in_db: 25.0
+          min_f_decay: -1.5
+          max_f_decay: 1.5
+      - type: pitch_shift
+        probability: 0.3
+        params:
+          min_transpose_semitones: -2.0
+          max_transpose_semitones: 2.0
+      - type: highpass
+        probability: 0.2
+        params:
+          min_cutoff_freq: 40.0
+          max_cutoff_freq: 200.0
+      - type: lowpass
+        probability: 0.2
+        params:
+          min_cutoff_freq: 8000.0
+          max_cutoff_freq: 14000.0
+      - type: time_masking
+        probability: 0.4
+        params:
+          num_time_intervals: 2
+          max_width: 400
+      - type: polarity_inversion
+        probability: 0.5
+  val:
+    enabled: false
+    shuffle: false
+    same_on_batch: false
+    transforms: []
+  test:
+    enabled: false
+    shuffle: false
+    same_on_batch: false
+    transforms: []
+
+dm:
+  batch_size: 128
+  # num_workers: null → auto-pick from physical core count at startup
+  # (min 2, max 8). Set explicitly if you want a specific number, e.g.
+  # `num_workers: 2` on `/Volumes/*` mounts where the filesystem is
+  # the real bottleneck — the auto-pick doesn't know about that.
+  num_workers: null
+  pin_memory: true
+  use_cache: false
+
+optim:
+  name: adamw
+  lr: 5.0e-4
+  weight_decay: 1.0e-2
+  momentum: 0.9
+
+sched:
+  name: cosine
+  t_max: 30
+  min_lr: 1.0e-5
+
+trainer:
+  max_epochs: 3
+  gradient_clip_val: 1.0
+  seed: 42
+  early_stopping_patience: 5
+  artifact_dir: runs/robust_session

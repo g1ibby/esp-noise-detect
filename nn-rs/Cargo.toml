@@ -1,0 +1,96 @@
+[package]
+name = "nn-rs"
+description = "Pump-noise classifier training / inference pipeline (Burn port of nn/)"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+publish = false
+
+# Project-local crate, per MIGRATION_PLAN.md §3. Everything specific to the
+# pump-noise task lives here: the Burn mel front-end (step 7), the TinyConv
+# model (step 9), the training / eval CLIs (steps 10-11) and the weight
+# export bridge (step 12). Publishable reuse boundaries already sit in the
+# cubek-* and burn-audiomentations crates.
+#
+# Today the crate only ships the mel extractor — step 7 of the plan. The
+# rest is scaffolded in as it lands.
+
+[features]
+default = ["std"]
+std = ["cubecl/std", "cubek-stft/std"]
+
+# GPU backend selectors (mutually exclusive — pick exactly one at build time).
+# `gpu` is a marker feature that the three binaries require; the
+# `compile_error!` guards in `src/train/runner.rs` enforce the
+# "exactly one backend" rule with a clear message.
+gpu    = []
+cuda   = ["gpu", "dep:burn-cuda", "burn/cuda", "cubecl/cuda"]
+metal  = ["gpu", "burn-wgpu/metal", "cubecl/wgpu-msl"]
+vulkan = ["gpu", "burn-wgpu/vulkan", "cubecl/wgpu-spirv"]
+webgpu = ["gpu", "burn-wgpu/webgpu", "cubecl/wgpu"]
+
+# Test-side backend selectors (mutually exclusive — pick exactly one per
+# `cargo test` run). These forward to cubecl so that cubecl/build.rs
+# emits cfg(test_runtime_{name}); see cubecl/crates/cubecl/build.rs upstream.
+test-metal  = ["cubecl/wgpu-msl"]
+test-vulkan = ["cubecl/wgpu-spirv"]
+test-cuda   = ["cubecl/cuda"]
+test-cpu    = ["cubecl/cpu"]
+
+[dependencies]
+burn = { workspace = true, features = ["std", "wgpu", "dataset", "autodiff"] }
+burn-wgpu = { workspace = true, features = ["std"] }
+burn-cuda = { workspace = true, optional = true }
+burn-cubecl = { workspace = true }
+burn-tensor = { workspace = true, features = ["std"] }
+burn-store = { workspace = true, features = ["std", "safetensors"] }
+
+cubecl = { workspace = true, features = ["std"] }
+cubek-stft = { workspace = true }
+
+# Step 10: augmentation pipeline lives in `burn-audiomentations`; it consumes
+# `TensorHandle<R>` and is driven by the same `WgpuRuntime` the mel front-end
+# uses.
+burn-audiomentations = { workspace = true }
+
+# Data pipeline (step 8). WAV decode via hound, manifest JSONL via
+# serde_json. Kept as direct deps rather than workspace deps because no
+# other crate in this workspace currently needs them.
+hound = "3.5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Step 10 additions: YAML config loader and host RNG for augment seeding.
+serde_yaml = "0.9"
+rand = { version = "0.9", default-features = false, features = ["std", "std_rng"] }
+
+# Used by the decoded-audio cache to measure available RAM at startup
+# and pick a cap that fits without swapping. Already transitive via
+# `wgpu` → `naga`; promoting to a direct dep so we can call it.
+sysinfo = { version = "0.38", default-features = false, features = ["system"] }
+
+[[bin]]
+name = "train"
+path = "src/bin/train.rs"
+required-features = ["gpu"]
+
+[[bin]]
+name = "eval"
+path = "src/bin/eval.rs"
+required-features = ["gpu"]
+
+# Step 12 — export Burn weights to a PyTorch-compatible .safetensors file.
+# Hands off to python/burn_to_onnx.py for the ONNX step.
+[[bin]]
+name = "export_weights"
+path = "src/bin/export_weights.rs"
+required-features = ["gpu"]
+
+[dev-dependencies]
+# `test-runtime` activates the optional `cubecl-wgpu` dep and the
+# `cubecl::TestRuntime` alias scaffolding. The actual backend is chosen
+# at `cargo test` time via one of `--features test-metal | test-vulkan |
+# test-cuda | test-cpu`; cubecl/build.rs reads those and emits a
+# matching `--cfg test_runtime_{backend}`.
+cubecl = { workspace = true, features = ["std", "stdlib", "test-runtime"] }
+bytemuck = { workspace = true }

@@ -9,3 +9,6 @@ recordings/
 .env
 firmware/.env
 
+# Reference repos for porting
+_reference/
+
