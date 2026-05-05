@@ -122,6 +122,11 @@ fn value_infos_match_esp_ppq_fixture() {
         expected_graph.output(),
         "graph outputs",
     );
+    assert_value_info_vec(
+        actual_graph.value_info(),
+        expected_graph.value_info(),
+        "graph value_info",
+    );
 }
 
 #[test]
@@ -231,7 +236,13 @@ fn assert_value_info_vec(
 ) {
     let actual = actual.expect("actual value info");
     let expected = expected.expect("expected value info");
-    assert_eq!(actual.len(), expected.len(), "{label} length");
+    let actual_names = (0..actual.len())
+        .map(|i| actual.get(i).name().unwrap_or("<unnamed>").to_string())
+        .collect::<Vec<_>>();
+    let expected_names = (0..expected.len())
+        .map(|i| expected.get(i).name().unwrap_or("<unnamed>").to_string())
+        .collect::<Vec<_>>();
+    assert_eq!(actual_names, expected_names, "{label} names");
     for i in 0..expected.len() {
         let a = actual.get(i);
         let e = expected.get(i);

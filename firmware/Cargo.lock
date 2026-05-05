@@ -480,7 +480,7 @@ dependencies = [
 [[package]]
 name = "edgedl"
 version = "0.1.0"
-source = "git+https://github.com/g1ibby/edgedl?branch=main#088f5fbb92b1aed167bb1731e0d21f11829a073f"
+source = "git+https://github.com/g1ibby/edgedl?branch=main#9a00ec4dcbf4c575362578f3668d97c27e5dd104"
 dependencies = [
  "bitflags 2.10.0",
  "libm",
@@ -490,7 +490,7 @@ dependencies = [
 [[package]]
 name = "edgedl-macros"
 version = "0.1.0"
-source = "git+https://github.com/g1ibby/edgedl?branch=main#088f5fbb92b1aed167bb1731e0d21f11829a073f"
+source = "git+https://github.com/g1ibby/edgedl?branch=main#9a00ec4dcbf4c575362578f3668d97c27e5dd104"
 dependencies = [
  "flatbuffers",
  "proc-macro-error",

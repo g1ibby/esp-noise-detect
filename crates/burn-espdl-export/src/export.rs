@@ -111,7 +111,9 @@ pub fn write_graph(
     let mut builder = FlatBufferBuilder::with_capacity(16 * 1024);
     let mut nodes = Vec::with_capacity(graph.layers.len());
     let mut initializers = Vec::new();
-    let mut intermediate_value_infos = Vec::new();
+    let mut conv_value_infos = Vec::new();
+    let mut reduce_mean_value_infos = Vec::new();
+    let mut linear_value_infos = Vec::new();
     let mut shape_initializer_idx = 0_usize;
 
     for layer in &graph.layers {
@@ -210,15 +212,13 @@ pub fn write_graph(
                     &node_name,
                     &attrs,
                 ));
-                if output != &graph.output_name {
-                    intermediate_value_infos.push(make_activation_value_info(
-                        &mut builder,
-                        output,
-                        state.shapes[output],
-                        cfg.activation_data_type(),
-                        scale(scales, output, TensorRole::Activation)?.exponent,
-                    ));
-                }
+                conv_value_infos.push(make_activation_value_info(
+                    &mut builder,
+                    output,
+                    state.shapes[output],
+                    cfg.activation_data_type(),
+                    scale(scales, output, TensorRole::Activation)?.exponent,
+                ));
             }
             Layer::ReduceMean {
                 input,
@@ -262,15 +262,13 @@ pub fn write_graph(
                     &node_name,
                     &attrs,
                 ));
-                if output != &graph.output_name {
-                    intermediate_value_infos.push(make_activation_value_info(
-                        &mut builder,
-                        output,
-                        output_shape,
-                        cfg.activation_data_type(),
-                        scale(scales, output, TensorRole::Activation)?.exponent,
-                    ));
-                }
+                reduce_mean_value_infos.push(make_activation_value_info(
+                    &mut builder,
+                    output,
+                    output_shape,
+                    cfg.activation_data_type(),
+                    scale(scales, output, TensorRole::Activation)?.exponent,
+                ));
             }
             Layer::Linear {
                 input,
@@ -340,15 +338,13 @@ pub fn write_graph(
                     &node_name,
                     &attrs,
                 ));
-                if output != &graph.output_name {
-                    intermediate_value_infos.push(make_activation_value_info(
-                        &mut builder,
-                        output,
-                        state.shapes[output],
-                        cfg.activation_data_type(),
-                        scale(scales, output, TensorRole::Activation)?.exponent,
-                    ));
-                }
+                linear_value_infos.push(make_activation_value_info(
+                    &mut builder,
+                    output,
+                    state.shapes[output],
+                    cfg.activation_data_type(),
+                    scale(scales, output, TensorRole::Activation)?.exponent,
+                ));
             }
             Layer::BatchNorm2d { .. } => {
                 return Err(ExportError::UnsupportedPreStep5Layer("BatchNormalization"));
@@ -377,11 +373,19 @@ pub fn write_graph(
         scale(scales, &graph.output_name, TensorRole::Activation)?.exponent,
     );
 
+    let mut value_infos = Vec::with_capacity(
+        linear_value_infos.len() + reduce_mean_value_infos.len() + conv_value_infos.len() + 1,
+    );
+    value_infos.extend(linear_value_infos);
+    value_infos.extend(reduce_mean_value_infos);
+    value_infos.extend(conv_value_infos);
+    value_infos.push(input_vi);
+
     let node_vec = builder.create_vector(&nodes);
     let init_vec = builder.create_vector(&initializers);
     let input_vec = builder.create_vector(&[input_vi]);
     let output_vec = builder.create_vector(&[output_vi]);
-    let value_info_vec = builder.create_vector(&intermediate_value_infos);
+    let value_info_vec = builder.create_vector(&value_infos);
     let graph_name = builder.create_string("burn-espdl-export");
     let graph_root = dl::Graph::create(
         &mut builder,
