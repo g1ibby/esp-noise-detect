@@ -40,10 +40,7 @@ fn tempdir() -> PathBuf {
     use std::sync::atomic::{AtomicU64, Ordering};
     static CTR: AtomicU64 = AtomicU64::new(0);
     let n = CTR.fetch_add(1, Ordering::Relaxed);
-    let p = std::env::temp_dir().join(format!(
-        "nn-rs-eval-smoke-{}-{n}",
-        std::process::id(),
-    ));
+    let p = std::env::temp_dir().join(format!("nn-rs-eval-smoke-{}-{n}", std::process::id(),));
     std::fs::create_dir_all(&p).unwrap();
     p
 }
@@ -107,9 +104,7 @@ fn base_config(manifest: &Path, artifact_dir: &Path, max_epochs: usize) -> Train
 #[test]
 fn evaluate_produces_metrics_and_calibration_json() {
     let Some(source_manifest) = dataset_manifest_path() else {
-        eprintln!(
-            "[skip] DATASET_MANIFEST not set — skipping eval smoke test"
-        );
+        eprintln!("[skip] DATASET_MANIFEST not set — skipping eval smoke test");
         return;
     };
 
@@ -133,8 +128,7 @@ fn evaluate_produces_metrics_and_calibration_json() {
     assert!(outcome.best_checkpoint.parent().unwrap().exists());
 
     // --- eval against the saved checkpoint ----------------------------
-    let evaluator: Evaluator<TestRuntime, f32, i32, u8> =
-        Evaluator::new(cfg, client, device);
+    let evaluator: Evaluator<TestRuntime, f32, i32, u8> = Evaluator::new(cfg, client, device);
     let ckpt_dir = outcome.best_checkpoint.parent().unwrap().to_path_buf();
     let metrics_json = ckpt_dir.join("metrics.json");
     let calibration_json = ckpt_dir.join("calibration.json");
@@ -196,7 +190,9 @@ fn evaluate_produces_metrics_and_calibration_json() {
     ] {
         assert!(file.get(k).is_some(), "metrics.json missing key `{k}`");
     }
-    let window = v.get("window").expect("window metrics block (window_metrics=true)");
+    let window = v
+        .get("window")
+        .expect("window metrics block (window_metrics=true)");
     assert!(window.get("macro_f1").is_some());
 
     // At least one file should have been evaluated (val slice is 4 rows).

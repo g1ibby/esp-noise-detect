@@ -44,6 +44,7 @@ burn-cuda = { workspace = true, optional = true }
 burn-cubecl = { workspace = true }
 burn-tensor = { workspace = true, features = ["std"] }
 burn-store = { workspace = true, features = ["std", "safetensors"] }
+burn-espdl-export = { workspace = true }
 
 cubecl = { workspace = true, features = ["std"] }
 cubek-stft = { workspace = true }
@@ -84,6 +85,11 @@ required-features = ["gpu"]
 [[bin]]
 name = "export_weights"
 path = "src/bin/export_weights.rs"
+required-features = ["gpu"]
+
+[[bin]]
+name = "export_espdl"
+path = "src/bin/export_espdl.rs"
 required-features = ["gpu"]
 
 [dev-dependencies]

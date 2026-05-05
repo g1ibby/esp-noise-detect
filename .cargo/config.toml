@@ -10,6 +10,8 @@
 # break feature resolution).
 
 [alias]
+xtask = ["run", "-p", "xtask", "--"]
+
 # --- Build / train (Mac, Metal) ---
 build-mac = ["build", "--release", "-p", "nn-rs", "--no-default-features", "--features", "std,metal", "--bin", "train"]
 train-mac = ["run",   "--release", "-p", "nn-rs", "--no-default-features", "--features", "std,metal", "--bin", "train"]

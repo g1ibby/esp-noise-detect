@@ -14,7 +14,7 @@
 mod common;
 
 use burn_audiomentations::{Gain, Transform, TransformRng};
-use common::{client, read_tensor, upload_2d, Runtime};
+use common::{Runtime, client, read_tensor, upload_2d};
 
 /// `num_elems = 16_777_472 = 65537 * 256`. Minimal-over-threshold size so
 /// the test allocates ~67 MB per tensor rather than a full GB.
@@ -31,11 +31,8 @@ fn gain_over_1d_dispatch_cap() {
 
     let g = Gain::new(6.0, 6.0, 1.0);
     let mut rng = TransformRng::new(0);
-    let out = <Gain as Transform<Runtime>>::apply(
-        &g,
-        upload_2d(&client, &sig, BATCH, TIME),
-        &mut rng,
-    );
+    let out =
+        <Gain as Transform<Runtime>>::apply(&g, upload_2d(&client, &sig, BATCH, TIME), &mut rng);
     let out_host = read_tensor(&client, out);
 
     assert_eq!(out_host.len(), BATCH * TIME);

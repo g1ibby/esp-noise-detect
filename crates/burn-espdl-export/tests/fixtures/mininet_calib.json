@@ -1,0 +1,70 @@
+{
+  "act_0_down_relu": {
+    "exponent": -5,
+    "scale": 0.03125
+  },
+  "act_0_down_relu.bias": {
+    "exponent": -13,
+    "scale": 0.0001220703125
+  },
+  "act_0_down_relu.weight": {
+    "exponent": -8,
+    "scale": 0.00390625
+  },
+  "act_0_refine_relu": {
+    "exponent": -6,
+    "scale": 0.015625
+  },
+  "act_0_refine_relu.bias": {
+    "exponent": -13,
+    "scale": 0.0001220703125
+  },
+  "act_0_refine_relu.weight": {
+    "exponent": -8,
+    "scale": 0.00390625
+  },
+  "act_12": {
+    "exponent": -7,
+    "scale": 0.0078125
+  },
+  "act_1_down_relu": {
+    "exponent": -6,
+    "scale": 0.015625
+  },
+  "act_1_down_relu.bias": {
+    "exponent": -14,
+    "scale": 6.103515625e-05
+  },
+  "act_1_down_relu.weight": {
+    "exponent": -8,
+    "scale": 0.00390625
+  },
+  "act_1_refine_relu": {
+    "exponent": -6,
+    "scale": 0.015625
+  },
+  "act_1_refine_relu.bias": {
+    "exponent": -14,
+    "scale": 6.103515625e-05
+  },
+  "act_1_refine_relu.weight": {
+    "exponent": -8,
+    "scale": 0.00390625
+  },
+  "input": {
+    "exponent": -5,
+    "scale": 0.03125
+  },
+  "logits": {
+    "exponent": -9,
+    "scale": 0.001953125
+  },
+  "logits.bias": {
+    "exponent": -16,
+    "scale": 1.52587890625e-05
+  },
+  "logits.weight": {
+    "exponent": -9,
+    "scale": 0.001953125
+  }
+}

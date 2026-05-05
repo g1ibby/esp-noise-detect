@@ -186,8 +186,8 @@ impl WindowedAudioDataset {
             let probe = probe_header(&it.audio_path, cfg.sample_rate, window_samples, hop_samples);
             let n_windows = match probe {
                 Ok(p) => {
-                    decoded_bytes_estimate = decoded_bytes_estimate
-                        .saturating_add(p.decoded_bytes as u64);
+                    decoded_bytes_estimate =
+                        decoded_bytes_estimate.saturating_add(p.decoded_bytes as u64);
                     p.n_windows.max(1)
                 }
                 // Can't read the header — enroll one window and let the
@@ -485,7 +485,11 @@ fn pick_cache_cap(dataset_bytes: u64, split: Split) -> usize {
         mb(dataset_bytes),
         mb(available),
         mb(cap),
-        if disabled { "  (disabled — too small)" } else { "" },
+        if disabled {
+            "  (disabled — too small)"
+        } else {
+            ""
+        },
     );
     if disabled { 0 } else { cap as usize }
 }

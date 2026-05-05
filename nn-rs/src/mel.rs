@@ -28,7 +28,7 @@
 use burn::prelude::Backend;
 use burn::tensor::{Tensor, TensorPrimitive, ops::PadMode};
 use burn_cubecl::tensor::CubeTensor;
-use burn_cubecl::{CubeBackend, CubeRuntime, FloatElement, IntElement, BoolElement};
+use burn_cubecl::{BoolElement, CubeBackend, CubeRuntime, FloatElement, IntElement};
 use cubecl::client::ComputeClient;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
@@ -174,7 +174,12 @@ impl<R: CubeRuntime> MelExtractor<R> {
     ///
     /// Panics on invalid combinations (non-power-of-two `n_fft`, `n_fft`
     /// above `cubek-stft::MAX_N_FFT`, `fmax > Nyquist`).
-    pub fn new(client: ComputeClient<R>, device: R::Device, cfg: MelConfig, sample_rate: u32) -> Self {
+    pub fn new(
+        client: ComputeClient<R>,
+        device: R::Device,
+        cfg: MelConfig,
+        sample_rate: u32,
+    ) -> Self {
         assert!(
             cfg.n_fft.is_power_of_two(),
             "n_fft ({}) must be a power of two",

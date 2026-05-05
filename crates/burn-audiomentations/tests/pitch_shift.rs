@@ -17,7 +17,7 @@
 mod common;
 
 use burn_audiomentations::{PitchShift, Transform, TransformRng};
-use common::{client, dtype_f32, max_abs_diff, read_tensor, sine, upload_2d, Runtime};
+use common::{Runtime, client, dtype_f32, max_abs_diff, read_tensor, sine, upload_2d};
 
 const SR: u32 = 32_000;
 const TIME: usize = SR as usize; // 1 s window, matches robust_session.yaml
@@ -77,7 +77,10 @@ fn probability_zero_is_identity() {
     let out_host = read_tensor(&client, out);
 
     let err = max_abs_diff(&out_host, &sig);
-    assert!(err < 1e-6, "p=0 should be identity, got max-abs-diff = {err}");
+    assert!(
+        err < 1e-6,
+        "p=0 should be identity, got max-abs-diff = {err}"
+    );
 }
 
 #[test]
@@ -87,8 +90,14 @@ fn enumerates_fast_shifts_in_range() {
     let client = client();
     let shifter = PitchShift::<Runtime>::new(client, SR, -2.0, 2.0, 1.0, dtype_f32());
     let shifts = shifter.shifts().to_vec();
-    assert!(shifts.contains(&(125u32, 128u32)), "missing 125/128 in {shifts:?}");
-    assert!(shifts.contains(&(128u32, 125u32)), "missing 128/125 in {shifts:?}");
+    assert!(
+        shifts.contains(&(125u32, 128u32)),
+        "missing 125/128 in {shifts:?}"
+    );
+    assert!(
+        shifts.contains(&(128u32, 125u32)),
+        "missing 128/125 in {shifts:?}"
+    );
     for (n, d) in shifts {
         assert_ne!((n, d), (1, 1), "unison should be excluded");
         let r = n as f32 / d as f32;

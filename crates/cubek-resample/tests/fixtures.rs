@@ -17,7 +17,7 @@ use cubek_resample::Resampler;
 
 mod common;
 
-use common::{client, dtype_f32, max_abs_diff, peak_abs, read_tensor, upload_2d, Runtime};
+use common::{Runtime, client, dtype_f32, max_abs_diff, peak_abs, read_tensor, upload_2d};
 
 struct Fixture {
     batch: usize,

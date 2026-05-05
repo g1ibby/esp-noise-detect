@@ -8,9 +8,9 @@
 //! GPU output is validated against a `rustfft`-based CPU reference, so a
 //! separate CPU cubecl runtime test is unnecessary.
 
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 use rustfft::FftPlanner;
 use rustfft::num_complex::Complex32;
 
@@ -119,9 +119,7 @@ pub fn stft_cpu(
     for (b, signal) in signal_batch.iter().enumerate() {
         for f in 0..n_frames {
             let start = f * hop;
-            let framed: Vec<f32> = (0..n_fft)
-                .map(|i| signal[start + i] * window[i])
-                .collect();
+            let framed: Vec<f32> = (0..n_fft).map(|i| signal[start + i] * window[i]).collect();
             let (re, im) = rustfft_rfft(&framed);
             let base = (b * n_frames + f) * n_freq;
             re_out[base..base + n_freq].copy_from_slice(&re);

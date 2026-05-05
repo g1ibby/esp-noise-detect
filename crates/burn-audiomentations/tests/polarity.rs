@@ -3,7 +3,7 @@
 mod common;
 
 use burn_audiomentations::{PolarityInversion, Transform, TransformRng};
-use common::{client, max_abs_diff, read_tensor, synth_reals, upload_2d, Runtime};
+use common::{Runtime, client, max_abs_diff, read_tensor, synth_reals, upload_2d};
 
 fn build_batch(batch: usize, time: usize) -> Vec<f32> {
     let mut out = vec![0.0; batch * time];

@@ -74,7 +74,11 @@ fn load(name: &str) -> Fixture {
 
     let fmin = read_f32(&bytes, 28);
     let fmax_raw = read_f32(&bytes, 32);
-    let fmax = if fmax_raw == 0.0 { None } else { Some(fmax_raw) };
+    let fmax = if fmax_raw == 0.0 {
+        None
+    } else {
+        Some(fmax_raw)
+    };
     let eps = read_f32(&bytes, 36);
 
     let mut cursor = 40usize;
@@ -126,23 +130,23 @@ fn run(name: &str, abs_tol: f32, rel_tol: f32) {
 
     let client = client();
     let device = device();
-    let extractor = MelExtractor::<common::Runtime>::new(
-        client,
-        device.clone(),
-        cfg.clone(),
-        fx.sample_rate,
-    );
+    let extractor =
+        MelExtractor::<common::Runtime>::new(client, device.clone(), cfg.clone(), fx.sample_rate);
     assert_eq!(
         extractor.num_frames(fx.time),
         fx.n_frames,
         "framing mismatch between Rust and fixture",
     );
 
-    let waveform = Tensor::<Backend, 1>::from_floats(fx.waveform.as_slice(), &device)
-        .reshape([1, fx.time]);
+    let waveform =
+        Tensor::<Backend, 1>::from_floats(fx.waveform.as_slice(), &device).reshape([1, fx.time]);
     let mel = extractor.forward(waveform);
     let dims = mel.dims();
-    assert_eq!(dims, [1, 1, fx.n_mels, fx.n_frames], "output shape mismatch");
+    assert_eq!(
+        dims,
+        [1, 1, fx.n_mels, fx.n_frames],
+        "output shape mismatch"
+    );
 
     let actual_flat = mel.into_data().convert::<f32>().to_vec::<f32>().unwrap();
 

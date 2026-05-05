@@ -10,9 +10,9 @@
 //! CPU reference (`lowpass_cpu`) for code paths that don't need a Python
 //! fixture.
 
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 
 // `Runtime` is a per-binary type alias for cubecl's TestRuntime — the
 // concrete backend is picked at `cargo test` time via one of the crate's
@@ -59,7 +59,13 @@ pub fn read_tensor(
 }
 
 pub fn max_abs_diff(a: &[f32], b: &[f32]) -> f32 {
-    assert_eq!(a.len(), b.len(), "length mismatch: {} vs {}", a.len(), b.len());
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "length mismatch: {} vs {}",
+        a.len(),
+        b.len()
+    );
     a.iter()
         .zip(b.iter())
         .map(|(x, y)| (x - y).abs())
@@ -104,8 +110,8 @@ pub fn build_filter_bank(cutoffs: &[f32], zeros: u32) -> (Vec<f32>, u32, u32) {
     let filter_len_f = filter_len as f64;
     let mut hann = vec![0.0f64; filter_len as usize];
     for n in 0..filter_len as usize {
-        hann[n] = 0.5
-            * (1.0 - (2.0 * core::f64::consts::PI * n as f64 / (filter_len_f - 1.0)).cos());
+        hann[n] =
+            0.5 * (1.0 - (2.0 * core::f64::consts::PI * n as f64 / (filter_len_f - 1.0)).cos());
     }
 
     let mut weights = vec![0.0f32; cutoffs.len() * filter_len as usize];

@@ -80,10 +80,8 @@ impl<B: Backend> Batcher<B, WindowedAudioItem, AudioBatch<B>> for AudioBatcher<B
             TensorData::new(wave_buf, [batch_size, window_samples]),
             device,
         );
-        let labels = Tensor::<B, 1, Int>::from_data(
-            TensorData::new(label_buf, [batch_size]),
-            device,
-        );
+        let labels =
+            Tensor::<B, 1, Int>::from_data(TensorData::new(label_buf, [batch_size]), device);
 
         AudioBatch {
             waveforms,

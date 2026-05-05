@@ -11,8 +11,8 @@
 mod common;
 
 use common::{
-    client, dtype_f32, lowpass_cpu, max_abs_diff, peak_abs, read_tensor, synth_reals, upload_2d,
-    upload_indices, Runtime,
+    Runtime, client, dtype_f32, lowpass_cpu, max_abs_diff, peak_abs, read_tensor, synth_reals,
+    upload_2d, upload_indices,
 };
 use cubek_sinc_filter::{FilterMode, LowPassFilterBank};
 
@@ -87,10 +87,12 @@ fn per_row_cutoffs_match_cpu_reference() {
 
     // 8 buckets covering the torch_audiomentations default LPF range
     // (150 Hz – 7500 Hz at 32 kHz).
-    let cutoffs: Vec<f32> = [150.0f32, 300.0, 600.0, 1200.0, 2400.0, 4000.0, 6000.0, 7500.0]
-        .iter()
-        .map(|f| f / 32_000.0)
-        .collect();
+    let cutoffs: Vec<f32> = [
+        150.0f32, 300.0, 600.0, 1200.0, 2400.0, 4000.0, 6000.0, 7500.0,
+    ]
+    .iter()
+    .map(|f| f / 32_000.0)
+    .collect();
     let zeros = 8;
     let bank = LowPassFilterBank::<Runtime>::new(client.clone(), &cutoffs, zeros, dtype);
 
@@ -115,9 +117,7 @@ fn per_row_cutoffs_match_cpu_reference() {
 
     let err = max_abs_diff(&actual, &expected);
     let peak = peak_abs(&expected);
-    eprintln!(
-        "[per_row/lp] batch={batch} time={time} err={err:.3e} peak={peak:.3e}",
-    );
+    eprintln!("[per_row/lp] batch={batch} time={time} err={err:.3e} peak={peak:.3e}",);
     assert!(err < 1e-5, "per-row lp diverged: {err:.3e}");
 }
 

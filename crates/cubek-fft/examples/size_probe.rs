@@ -19,11 +19,14 @@ use cubek_fft::rfft;
 // features — same machinery the test suites use.
 type R = TestRuntime;
 
-fn probe(client: &cubecl::client::ComputeClient<R>, dtype: cubecl::prelude::StorageType, n_fft: usize) {
+fn probe(
+    client: &cubecl::client::ComputeClient<R>,
+    dtype: cubecl::prelude::StorageType,
+    n_fft: usize,
+) {
     let sig = vec![1.0f32; n_fft];
     let handle = client.create_from_slice(f32::as_bytes(&sig));
-    let signal =
-        TensorHandle::<R>::new_contiguous(vec![1, n_fft], handle, dtype);
+    let signal = TensorHandle::<R>::new_contiguous(vec![1, n_fft], handle, dtype);
     let (re, _im) = rfft::<R>(signal, 1, dtype);
     let bytes = client.read_one(re.handle).expect("read");
     let data = f32::from_bytes(&bytes);

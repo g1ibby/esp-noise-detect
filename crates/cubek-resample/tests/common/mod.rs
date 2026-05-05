@@ -10,9 +10,9 @@
 
 use core::f32::consts::PI;
 
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 
 // `Runtime` is a per-binary type alias for cubecl's TestRuntime — the
 // concrete backend is picked at `cargo test` time via one of the crate's
@@ -47,7 +47,13 @@ pub fn read_tensor(
 }
 
 pub fn max_abs_diff(a: &[f32], b: &[f32]) -> f32 {
-    assert_eq!(a.len(), b.len(), "length mismatch: {} vs {}", a.len(), b.len());
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "length mismatch: {} vs {}",
+        a.len(),
+        b.len()
+    );
     a.iter()
         .zip(b.iter())
         .map(|(x, y)| (x - y).abs())
@@ -78,7 +84,12 @@ pub fn synth_reals(n: usize, seed: u64) -> Vec<f32> {
 ///
 /// Duplicated from `src/kernels.rs` so the test reference is computed
 /// independently from the GPU code path.
-pub fn build_kernel_bank(old_sr: u32, new_sr: u32, zeros: u32, rolloff: f32) -> (Vec<f32>, u32, u32, u32, u32) {
+pub fn build_kernel_bank(
+    old_sr: u32,
+    new_sr: u32,
+    zeros: u32,
+    rolloff: f32,
+) -> (Vec<f32>, u32, u32, u32, u32) {
     let g = {
         let (mut a, mut b) = (old_sr, new_sr);
         while b != 0 {
@@ -141,8 +152,7 @@ pub fn resample_cpu(
     if old_sr_r == new_sr_r {
         return signal.to_vec();
     }
-    let default_len =
-        ((new_sr_r as i64) * (time as i64) / (old_sr_r as i64)) as usize;
+    let default_len = ((new_sr_r as i64) * (time as i64) / (old_sr_r as i64)) as usize;
     let out_len = output_length.unwrap_or(default_len);
     let mut out = vec![0.0f32; batch * out_len];
 
@@ -152,8 +162,7 @@ pub fn resample_cpu(
         for tt in 0..out_len {
             let i = tt % new_sr_r as usize;
             let j = tt / new_sr_r as usize;
-            let krow = &kernels
-                [(i * kernel_len as usize)..((i + 1) * kernel_len as usize)];
+            let krow = &kernels[(i * kernel_len as usize)..((i + 1) * kernel_len as usize)];
             let base = j * old_sr_r as usize;
             let mut acc = 0.0f32;
             for k in 0..kernel_len as usize {

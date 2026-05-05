@@ -13,8 +13,8 @@ use burn::data::dataloader::batcher::Batcher;
 use burn::data::dataset::Dataset;
 
 use nn_rs::data::{
-    AudioBatch, AudioBatcher, DatasetConfig, ManifestItem, Split,
-    WindowedAudioDataset, WindowedAudioItem, load_manifest,
+    AudioBatch, AudioBatcher, DatasetConfig, ManifestItem, Split, WindowedAudioDataset,
+    WindowedAudioItem, load_manifest,
 };
 
 mod common;
@@ -185,8 +185,7 @@ fn split_filter_selects_only_matching_rows() {
     );
     let items = load_manifest(&manifest).unwrap();
 
-    let train_ds =
-        WindowedAudioDataset::new(items.clone(), cfg(), Split::Train).unwrap();
+    let train_ds = WindowedAudioDataset::new(items.clone(), cfg(), Split::Train).unwrap();
     let val_ds = WindowedAudioDataset::new(items.clone(), cfg(), Split::Val).unwrap();
     let test_ds = WindowedAudioDataset::new(items, cfg(), Split::Test).unwrap();
 
@@ -209,12 +208,8 @@ fn labels_decode_per_class_names_order() {
             r#"{"audio_path": "on.wav", "label": "pump_on"}"#,
         ],
     );
-    let ds = WindowedAudioDataset::new(
-        load_manifest(&manifest).unwrap(),
-        cfg(),
-        Split::Train,
-    )
-    .unwrap();
+    let ds =
+        WindowedAudioDataset::new(load_manifest(&manifest).unwrap(), cfg(), Split::Train).unwrap();
 
     // class_names default order is ["pump_off", "pump_on"], so
     // off → 0, on → 1.
@@ -239,10 +234,7 @@ fn unknown_label_rejected_at_construction() {
     let items = load_manifest(&manifest).unwrap();
     match WindowedAudioDataset::new(items, cfg(), Split::Train) {
         Ok(_) => panic!("expected UnknownLabel error"),
-        Err(e) => assert!(
-            format!("{e}").contains("pump_wat"),
-            "unexpected error: {e}"
-        ),
+        Err(e) => assert!(format!("{e}").contains("pump_wat"), "unexpected error: {e}"),
     }
 }
 
@@ -256,12 +248,8 @@ fn mismatched_sample_rate_rejected_lazily() {
         "m.jsonl",
         &[r#"{"audio_path": "lowsr.wav", "label": "pump_off"}"#],
     );
-    let ds = WindowedAudioDataset::new(
-        load_manifest(&manifest).unwrap(),
-        cfg(),
-        Split::Train,
-    )
-    .unwrap();
+    let ds =
+        WindowedAudioDataset::new(load_manifest(&manifest).unwrap(), cfg(), Split::Train).unwrap();
     assert_eq!(ds.len(), 1); // lazy-failure fallback
     assert!(
         ds.get(0).is_none(),
@@ -282,12 +270,8 @@ fn batcher_stacks_windows_and_labels() {
             r#"{"audio_path": "b.wav", "label": "pump_on"}"#,
         ],
     );
-    let ds = WindowedAudioDataset::new(
-        load_manifest(&manifest).unwrap(),
-        cfg(),
-        Split::Train,
-    )
-    .unwrap();
+    let ds =
+        WindowedAudioDataset::new(load_manifest(&manifest).unwrap(), cfg(), Split::Train).unwrap();
 
     let items: Vec<WindowedAudioItem> = (0..ds.len()).map(|i| ds.get(i).unwrap()).collect();
     assert_eq!(items.len(), 2);

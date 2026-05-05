@@ -15,7 +15,6 @@ pub mod runner;
 
 pub use config::TrainAppConfig;
 pub use metrics::BinaryClassificationStats;
-pub use runner::{StageTimings, TrainOutcome, Trainer};
 #[cfg(any(
     feature = "cuda",
     feature = "metal",
@@ -26,3 +25,4 @@ pub use runner::{
     AutodiffBackendConcrete, Backend, SelectedAutodiff, SelectedCube, SelectedDevice,
     SelectedRuntime, TrainerConcrete, WgpuAutodiff, WgpuCube,
 };
+pub use runner::{StageTimings, TrainOutcome, Trainer};

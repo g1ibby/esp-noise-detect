@@ -20,9 +20,9 @@
 use std::time::Instant;
 
 use burn_audiomentations::{AddColoredNoise, Transform, TransformRng};
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 
 const BATCH: usize = 128;
 const TIME: usize = 32_000;

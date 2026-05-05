@@ -59,12 +59,7 @@ pub(crate) fn build_mel_buckets(
 }
 
 /// Pick the nearest bucket center in mel-space for a Hertz draw.
-pub(crate) fn quantize_in_mel(
-    freq_hz: f32,
-    min_hz: f32,
-    max_hz: f32,
-    num_buckets: u32,
-) -> u32 {
+pub(crate) fn quantize_in_mel(freq_hz: f32, min_hz: f32, max_hz: f32, num_buckets: u32) -> u32 {
     let min_mel = hz_to_mel(min_hz);
     let max_mel = hz_to_mel(max_hz);
     let mel = hz_to_mel(freq_hz.clamp(min_hz, max_hz));
@@ -127,7 +122,11 @@ impl<R: Runtime> LowPassFilter<R> {
 
 impl<R: Runtime> Transform<R> for LowPassFilter<R> {
     fn apply(&self, samples: TensorHandle<R>, rng: &mut TransformRng) -> TensorHandle<R> {
-        assert_eq!(samples.shape().len(), 2, "LowPassFilter expects (batch, time)");
+        assert_eq!(
+            samples.shape().len(),
+            2,
+            "LowPassFilter expects (batch, time)"
+        );
         let batch = samples.shape()[0];
 
         let mask = bernoulli_mask(batch, self.probability, rng.host());
@@ -210,7 +209,11 @@ impl<R: Runtime> HighPassFilter<R> {
 
 impl<R: Runtime> Transform<R> for HighPassFilter<R> {
     fn apply(&self, samples: TensorHandle<R>, rng: &mut TransformRng) -> TensorHandle<R> {
-        assert_eq!(samples.shape().len(), 2, "HighPassFilter expects (batch, time)");
+        assert_eq!(
+            samples.shape().len(),
+            2,
+            "HighPassFilter expects (batch, time)"
+        );
         let batch = samples.shape()[0];
 
         let mask = bernoulli_mask(batch, self.probability, rng.host());

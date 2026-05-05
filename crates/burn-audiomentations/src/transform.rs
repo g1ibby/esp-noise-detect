@@ -74,7 +74,12 @@ pub(crate) fn bernoulli_mask(batch: usize, p: f64, rng: &mut StdRng) -> Vec<f32>
 }
 
 /// Host-side uniform draw used by every transform with a parameter range.
-pub(crate) fn sample_uniform_batch(batch: usize, low: f32, high: f32, rng: &mut StdRng) -> Vec<f32> {
+pub(crate) fn sample_uniform_batch(
+    batch: usize,
+    low: f32,
+    high: f32,
+    rng: &mut StdRng,
+) -> Vec<f32> {
     use rand::Rng;
     assert!(
         high >= low,

@@ -91,11 +91,17 @@ fn parse_args() -> Result<Cli, String> {
     let config = config.ok_or_else(|| format!("missing --config\n{}", usage()))?;
     let checkpoint = checkpoint.ok_or_else(|| format!("missing --checkpoint\n{}", usage()))?;
     let out = out.ok_or_else(|| format!("missing --out\n{}", usage()))?;
-    Ok(Cli { config, checkpoint, out, verify_logits })
+    Ok(Cli {
+        config,
+        checkpoint,
+        out,
+        verify_logits,
+    })
 }
 
 fn need<I: Iterator<Item = String>>(args: &mut I, name: &str) -> Result<String, String> {
-    args.next().ok_or_else(|| format!("{name} takes an argument"))
+    args.next()
+        .ok_or_else(|| format!("{name} takes an argument"))
 }
 
 /// `CompactRecorder::load` expects a stem (it appends `.mpk`). If the
@@ -212,7 +218,9 @@ fn run(cli: Cli) -> std::io::Result<()> {
         write_logits_json(path, &logits_vec, &dims)?;
         println!(
             "Wrote canary logits ({}x{}) to {}",
-            dims[0], dims[1], path.display(),
+            dims[0],
+            dims[1],
+            path.display(),
         );
     }
 
@@ -227,10 +235,9 @@ fn run(cli: Cli) -> std::io::Result<()> {
 /// Number of mel frames emitted by `MelExtractor` for a 1-window input
 /// at `sample_rate` with `center=True` reflect padding.
 fn mel_frame_count(cfg: &TrainAppConfig) -> usize {
-    let window_samples =
-        (cfg.dataset.window_s * cfg.dataset.sample_rate as f32).round() as usize;
-    let hop = (cfg.features.hop_length_ms / 1000.0 * cfg.dataset.sample_rate as f32).round()
-        as usize;
+    let window_samples = (cfg.dataset.window_s * cfg.dataset.sample_rate as f32).round() as usize;
+    let hop =
+        (cfg.features.hop_length_ms / 1000.0 * cfg.dataset.sample_rate as f32).round() as usize;
     let padded = if cfg.features.center {
         window_samples + cfg.features.n_fft
     } else {

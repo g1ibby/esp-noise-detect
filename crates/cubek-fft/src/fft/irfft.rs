@@ -94,8 +94,7 @@ pub fn irfft_launch<R: Runtime>(
     let threads_per_cube = (n_fft / 2).min(MAX_UNITS_PER_CUBE).max(1);
 
     let cube_dim = CubeDim::new_1d(threads_per_cube as u32);
-    let cube_count =
-        cubecl::calculate_cube_count_elemwise(client, count, CubeDim::new_single());
+    let cube_count = cubecl::calculate_cube_count_elemwise(client, count, CubeDim::new_single());
 
     irfft_kernel::launch::<f32, R>(
         client,

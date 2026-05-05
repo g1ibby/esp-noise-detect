@@ -91,12 +91,7 @@ impl<R: Runtime> LowPassFilterBank<R> {
     /// Panics if `cutoffs` is empty, if any cutoff is outside `[0, 0.5]`,
     /// if `zeros == 0`, or if the derived `half_size` is 0 (cutoffs too
     /// large for `zeros` — Julius's `int(...)` truncation hitting 0).
-    pub fn new(
-        client: ComputeClient<R>,
-        cutoffs: &[f32],
-        zeros: u32,
-        dtype: StorageType,
-    ) -> Self {
+    pub fn new(client: ComputeClient<R>, cutoffs: &[f32], zeros: u32, dtype: StorageType) -> Self {
         let bank = FilterBank::new(cutoffs, zeros);
 
         let handle = client.create_from_slice(f32::as_bytes(&bank.weights));
@@ -243,18 +238,16 @@ impl<R: Runtime> LowPassFilterBank<R> {
             "apply_per_row expects (batch, time), got rank {}",
             signal.shape().len(),
         );
-        assert_eq!(
-            indices.shape().len(),
-            1,
-            "indices must be rank-1",
-        );
+        assert_eq!(indices.shape().len(), 1, "indices must be rank-1",);
         let batch = signal.shape()[0];
         let time = signal.shape()[1];
         assert!(time > 0, "signal time must be > 0");
         assert_eq!(
-            indices.shape()[0], batch,
+            indices.shape()[0],
+            batch,
             "indices length {} does not match batch {}",
-            indices.shape()[0], batch,
+            indices.shape()[0],
+            batch,
         );
 
         if self.half_size > FFT_THRESHOLD {

@@ -14,8 +14,7 @@
 mod common;
 
 use common::{
-    client, dtype_f32, max_abs_diff, peak_abs, read_tensor, synthesize_signal, upload_1d,
-    upload_2d,
+    client, dtype_f32, max_abs_diff, peak_abs, read_tensor, synthesize_signal, upload_1d, upload_2d,
 };
 use cubek_stft::window::hann_window_periodic;
 use cubek_stft::{istft, stft};
@@ -45,7 +44,11 @@ fn run_roundtrip(batch: usize, time: usize, n_fft: usize, hop: usize, seed_base:
     // Reconstructed shape is (batch, (n_frames - 1)*hop + n_fft). For our
     // framing that equals (time - (time - n_fft) % hop). When hop divides
     // (time - n_fft), reconstructed length == time.
-    assert_eq!((time - n_fft) % hop, 0, "test setup: hop must divide time - n_fft");
+    assert_eq!(
+        (time - n_fft) % hop,
+        0,
+        "test setup: hop must divide time - n_fft"
+    );
     let t_out = (((time - n_fft) / hop) * hop) + n_fft;
     assert_eq!(t_out, time);
     assert_eq!(reconstructed.len(), batch * t_out);
@@ -75,7 +78,10 @@ fn run_roundtrip(batch: usize, time: usize, n_fft: usize, hop: usize, seed_base:
         "[batch={batch} time={time} n_fft={n_fft} hop={hop}] \
          max_err={max_err:.3e} peak={peak:.3e} tol={tol:.3e}",
     );
-    assert!(max_err < tol, "round-trip interior error {max_err:.3e} >= {tol:.3e}");
+    assert!(
+        max_err < tol,
+        "round-trip interior error {max_err:.3e} >= {tol:.3e}"
+    );
 }
 
 #[test]

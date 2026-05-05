@@ -8,7 +8,7 @@
 mod common;
 
 use burn_audiomentations::{AddColoredNoise, Transform, TransformRng};
-use common::{client, max_abs_diff, read_tensor, rms, sine, synth_reals, upload_2d, Runtime};
+use common::{Runtime, client, max_abs_diff, read_tensor, rms, sine, synth_reals, upload_2d};
 
 const SR: u32 = 32_000;
 
@@ -83,8 +83,7 @@ fn cubek_random_is_deterministic_under_reseed() {
         client.empty(n * core::mem::size_of::<f32>()),
         dtype,
     );
-    cubek_random::random_normal::<Runtime>(&client, 0.0, 1.0, t1.clone().binding(), dtype)
-        .unwrap();
+    cubek_random::random_normal::<Runtime>(&client, 0.0, 1.0, t1.clone().binding(), dtype).unwrap();
     let a = read_tensor(&client, t1);
 
     cubek_random::seed(42);
@@ -93,8 +92,7 @@ fn cubek_random_is_deterministic_under_reseed() {
         client.empty(n * core::mem::size_of::<f32>()),
         dtype,
     );
-    cubek_random::random_normal::<Runtime>(&client, 0.0, 1.0, t2.clone().binding(), dtype)
-        .unwrap();
+    cubek_random::random_normal::<Runtime>(&client, 0.0, 1.0, t2.clone().binding(), dtype).unwrap();
     let b = read_tensor(&client, t2);
 
     let err = max_abs_diff(&a, &b);
@@ -102,7 +100,10 @@ fn cubek_random_is_deterministic_under_reseed() {
     for i in 0..8 {
         eprintln!("  [{i}] a={} b={}", a[i], b[i]);
     }
-    assert!(err < 1e-6, "cubek-random reseeding should be deterministic, got {err}");
+    assert!(
+        err < 1e-6,
+        "cubek-random reseeding should be deterministic, got {err}"
+    );
 }
 
 // Determinism note. `AddColoredNoise` is bit-reproducible run-to-run only

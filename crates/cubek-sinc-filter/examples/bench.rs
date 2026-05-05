@@ -24,9 +24,9 @@
 
 use std::time::Instant;
 
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 use cubek_sinc_filter::{FilterMode, LowPassFilterBank};
 
 const BATCH: usize = 128;
@@ -72,10 +72,30 @@ struct Case {
 
 fn main() {
     let cases = [
-        Case { label: "highpass_low_cutoff  (40..200 Hz)",   min_hz: 40.0,    max_hz: 200.0,   mode: FilterMode::HighPass },
-        Case { label: "highpass_mid_cutoff  (2000..5000 Hz)",min_hz: 2000.0,  max_hz: 5000.0,  mode: FilterMode::HighPass },
-        Case { label: "lowpass_high_cutoff  (8000..14000 Hz)",min_hz: 8000.0, max_hz: 14000.0, mode: FilterMode::LowPass },
-        Case { label: "lowpass_mid_cutoff   (2000..5000 Hz)",min_hz: 2000.0,  max_hz: 5000.0,  mode: FilterMode::LowPass },
+        Case {
+            label: "highpass_low_cutoff  (40..200 Hz)",
+            min_hz: 40.0,
+            max_hz: 200.0,
+            mode: FilterMode::HighPass,
+        },
+        Case {
+            label: "highpass_mid_cutoff  (2000..5000 Hz)",
+            min_hz: 2000.0,
+            max_hz: 5000.0,
+            mode: FilterMode::HighPass,
+        },
+        Case {
+            label: "lowpass_high_cutoff  (8000..14000 Hz)",
+            min_hz: 8000.0,
+            max_hz: 14000.0,
+            mode: FilterMode::LowPass,
+        },
+        Case {
+            label: "lowpass_mid_cutoff   (2000..5000 Hz)",
+            min_hz: 2000.0,
+            max_hz: 5000.0,
+            mode: FilterMode::LowPass,
+        },
     ];
 
     let client = <R as cubecl::Runtime>::client(&<R as cubecl::Runtime>::Device::default());
@@ -111,9 +131,7 @@ fn main() {
 
         // Pick a spread of buckets for the per-row indices so we're not
         // benchmarking a single row repeatedly.
-        let mut indices: Vec<u32> = (0..BATCH)
-            .map(|b| 1 + (b as u32 % NUM_BUCKETS))
-            .collect();
+        let mut indices: Vec<u32> = (0..BATCH).map(|b| 1 + (b as u32 % NUM_BUCKETS)).collect();
         // Sprinkle a couple of bucket-0 (no-op) entries to look realistic.
         indices[0] = 0;
         indices[BATCH / 2] = 0;
@@ -146,8 +164,8 @@ fn main() {
         samples_ms.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let min_ms = samples_ms[0];
         let med_ms = samples_ms[samples_ms.len() / 2];
-        let p99_ms = samples_ms[((samples_ms.len() as f64 * 0.99).ceil() as usize)
-            .min(samples_ms.len() - 1)];
+        let p99_ms = samples_ms
+            [((samples_ms.len() as f64 * 0.99).ceil() as usize).min(samples_ms.len() - 1)];
 
         println!("{}", case.label);
         println!(

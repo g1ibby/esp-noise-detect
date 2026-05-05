@@ -187,14 +187,14 @@ fn inject_block(
     let conv_down = tensor_from(w.conv_down, [w.out_ch, w.in_ch, 5, 5], device);
     block.conv_down.weight = Param::from_tensor(conv_down.set_require_grad(false));
 
-    block.bn_down.gamma =
-        Param::from_tensor(tensor_from(w.bn_down_gamma, [w.out_ch], device).set_require_grad(false));
+    block.bn_down.gamma = Param::from_tensor(
+        tensor_from(w.bn_down_gamma, [w.out_ch], device).set_require_grad(false),
+    );
     block.bn_down.beta =
         Param::from_tensor(tensor_from(w.bn_down_beta, [w.out_ch], device).set_require_grad(false));
     block.bn_down.running_mean =
         RunningState::new(tensor_from(w.bn_down_rmean, [w.out_ch], device));
-    block.bn_down.running_var =
-        RunningState::new(tensor_from(w.bn_down_rvar, [w.out_ch], device));
+    block.bn_down.running_var = RunningState::new(tensor_from(w.bn_down_rvar, [w.out_ch], device));
 
     let conv_refine = tensor_from(w.conv_refine, [w.out_ch, w.out_ch, 3, 3], device);
     block.conv_refine.weight = Param::from_tensor(conv_refine.set_require_grad(false));
@@ -241,19 +241,11 @@ fn tinyconv_forward_parity() {
     let head_b = tensor_from(fx.head_bias, [fx.n_classes], &device);
     model.head.bias = Some(Param::from_tensor(head_b.set_require_grad(false)));
 
-    let input = tensor_from(
-        fx.input,
-        [fx.batch, 1, fx.n_mels, fx.n_frames],
-        &device,
-    );
+    let input = tensor_from(fx.input, [fx.batch, 1, fx.n_mels, fx.n_frames], &device);
 
     let out = model.forward(input);
     let out_dims = out.dims();
-    assert_eq!(
-        out_dims,
-        [fx.batch, fx.n_classes],
-        "output shape mismatch",
-    );
+    assert_eq!(out_dims, [fx.batch, fx.n_classes], "output shape mismatch",);
 
     let actual = out.into_data().convert::<f32>().to_vec::<f32>().unwrap();
     let abs = max_abs_diff(&actual, &fx.expected);

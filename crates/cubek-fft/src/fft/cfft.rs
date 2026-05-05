@@ -42,7 +42,10 @@ const MAX_UNITS_PER_CUBE: usize = 256;
 /// of two, both `<= MAX_SHARED_N_FFT`, and the split is as balanced as
 /// possible.
 pub(crate) fn factor_four_step(n_fft: usize) -> (usize, usize) {
-    assert!(n_fft.is_power_of_two(), "four-step needs power-of-two n_fft");
+    assert!(
+        n_fft.is_power_of_two(),
+        "four-step needs power-of-two n_fft"
+    );
     let log2_n = n_fft.trailing_zeros() as usize;
     let max_log2 = MAX_SHARED_N_FFT.trailing_zeros() as usize;
     // Balanced split, then push each factor up to the shared-mem cap if the

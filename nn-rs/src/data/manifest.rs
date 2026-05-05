@@ -106,11 +106,7 @@ pub fn load_manifest(path: &Path) -> io::Result<Vec<ManifestItem>> {
 
 fn resolve_audio_path(audio_path: &str, base_dir: &Path) -> PathBuf {
     let p = PathBuf::from(audio_path);
-    if p.is_absolute() {
-        p
-    } else {
-        base_dir.join(p)
-    }
+    if p.is_absolute() { p } else { base_dir.join(p) }
 }
 
 #[cfg(test)]
@@ -182,10 +178,7 @@ not-even-json
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         let mut p = std::env::temp_dir();
-        p.push(format!(
-            "nn-rs-manifest-test-{}-{n}",
-            std::process::id(),
-        ));
+        p.push(format!("nn-rs-manifest-test-{}-{n}", std::process::id(),));
         std::fs::create_dir_all(&p).unwrap();
         TempDir(p)
     }

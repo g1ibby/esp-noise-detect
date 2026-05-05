@@ -1,9 +1,9 @@
 # SkyPilot task for the Rust (Burn + CubeCL) training pipeline on RunPod.
 #
-# Remote pod runs ONLY the Rust-side steps — train → eval →
-# export_weights. The Python Burn-to-ONNX bridge + esp-ppq Docker
-# quantizer stay on the developer laptop (see `scripts/burn_to_espdl.sh`),
-# which keeps the pod image minimal and avoids nested-Docker surprises.
+# Remote pod runs the Rust-side training/eval steps and writes the Burn
+# checkpoint. Native `.espdl` export runs on the developer laptop via
+# `nn-rs --bin export_espdl`, so the pod image stays minimal and avoids
+# nested-Docker surprises.
 #
 # Usage — run from the repo root (where this yaml + .skyignore live):
 #
@@ -32,12 +32,11 @@
 #       /tmp/nn-rs-robust-cuda/
 #   sky down nn-rs-pump -y
 #
-# Then run the local ONNX + .espdl step (requires Docker on the laptop):
+# Then run the local native `.espdl` export:
 #
-#   scripts/burn_to_espdl.sh \
+#   cargo run --release -p nn-rs --no-default-features --features std,metal --bin export_espdl -- \
 #     --checkpoint /tmp/nn-rs-robust-cuda/checkpoints/best.mpk \
-#     --manifest   /abs/path/to/voicy/recordings/manifest.jsonl \
-#     --out-dir    /tmp/nn-rs-robust-cuda/export
+#     --manifest   /abs/path/to/voicy/recordings/manifest.jsonl
 #
 # Re-run training on the SAME cluster (skips re-upload + cargo cold build):
 #
@@ -150,8 +149,8 @@ run: |
       --split      val
 
   # --[3/3] Burn → safetensors + parity logits ---------------------
-  # The .safetensors + logits_rust.json are the hand-off to the laptop,
-  # which runs `scripts/burn_to_espdl.sh` (ONNX + esp-ppq Docker → .espdl).
+  # These are retained for the legacy Python/ONNX exporter. Native
+  # `.espdl` export uses the checkpoint directly.
   mkdir -p "${EXPORT_DIR}"
   cargo run --release -p nn-rs --no-default-features \
       --features std,cuda --bin export_weights -- \
@@ -169,6 +168,7 @@ run: |
   echo ""
   echo "Pull back to laptop:"
   echo "  rsync -avz --progress nn-rs-pump:sky_workdir/${ARTIFACT_DIR}/ /tmp/nn-rs-robust-cuda/"
-  echo "  scripts/burn_to_espdl.sh --checkpoint /tmp/nn-rs-robust-cuda/checkpoints/best.mpk \\"
-  echo "      --manifest <recordings>/manifest.jsonl --out-dir /tmp/nn-rs-robust-cuda/export"
+  echo "  cargo run --release -p nn-rs --no-default-features --features std,metal --bin export_espdl -- \\"
+  echo "      --checkpoint /tmp/nn-rs-robust-cuda/checkpoints/best.mpk \\"
+  echo "      --manifest <recordings>/manifest.jsonl"
   echo "============================================================"

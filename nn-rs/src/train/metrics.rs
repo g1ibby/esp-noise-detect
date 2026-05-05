@@ -47,11 +47,7 @@ impl BinaryClassificationStats {
                 .iter()
                 .enumerate()
                 .fold((0usize, row[0]), |(best_i, best_v), (i, &v)| {
-                    if v > best_v {
-                        (i, v)
-                    } else {
-                        (best_i, best_v)
-                    }
+                    if v > best_v { (i, v) } else { (best_i, best_v) }
                 })
                 .0;
             let target = target as usize;

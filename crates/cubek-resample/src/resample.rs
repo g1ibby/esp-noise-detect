@@ -131,11 +131,7 @@ impl<R: Runtime> Resampler<R> {
     ///
     /// For the identity case (`old_sr == new_sr` after GCD), the input
     /// handle is returned unchanged.
-    pub fn apply(
-        &self,
-        signal: TensorHandle<R>,
-        output_length: Option<usize>,
-    ) -> TensorHandle<R> {
+    pub fn apply(&self, signal: TensorHandle<R>, output_length: Option<usize>) -> TensorHandle<R> {
         assert_eq!(
             signal.shape().len(),
             2,

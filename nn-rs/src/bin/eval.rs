@@ -101,15 +101,11 @@ fn parse_args() -> Result<Cli, String> {
                 cli.metrics_json = Some(PathBuf::from(need(&mut args, "--metrics-json")?))
             }
             "--calibration-json" => {
-                cli.calibration_json =
-                    Some(PathBuf::from(need(&mut args, "--calibration-json")?))
+                cli.calibration_json = Some(PathBuf::from(need(&mut args, "--calibration-json")?))
             }
-            "--preds-csv" => {
-                cli.preds_csv = Some(PathBuf::from(need(&mut args, "--preds-csv")?))
-            }
+            "--preds-csv" => cli.preds_csv = Some(PathBuf::from(need(&mut args, "--preds-csv")?)),
             "--window-preds-csv" => {
-                cli.window_preds_csv =
-                    Some(PathBuf::from(need(&mut args, "--window-preds-csv")?))
+                cli.window_preds_csv = Some(PathBuf::from(need(&mut args, "--window-preds-csv")?))
             }
             "--batch-size" => {
                 cli.batch_size = Some(
@@ -142,7 +138,8 @@ fn parse_args() -> Result<Cli, String> {
 }
 
 fn need<I: Iterator<Item = String>>(args: &mut I, name: &str) -> Result<String, String> {
-    args.next().ok_or_else(|| format!("{name} takes an argument"))
+    args.next()
+        .ok_or_else(|| format!("{name} takes an argument"))
 }
 
 fn main() -> ExitCode {
@@ -222,18 +219,13 @@ fn main() -> ExitCode {
 
     let device = SelectedDevice::default();
     let client = <SelectedRuntime as Runtime>::client(&device);
-    let evaluator: Evaluator<SelectedRuntime, f32, i32, u8> =
-        Evaluator::new(cfg, client, device);
+    let evaluator: Evaluator<SelectedRuntime, f32, i32, u8> = Evaluator::new(cfg, client, device);
 
     match evaluator.evaluate(&opts) {
         Ok(out) => {
             println!(
                 "\nevaluation complete — files={} windows={} macro_f1={:.4} acc={:.4} threshold={:.3}",
-                out.num_files,
-                out.num_windows,
-                out.file.macro_f1,
-                out.file.accuracy,
-                out.threshold,
+                out.num_files, out.num_windows, out.file.macro_f1, out.file.accuracy, out.threshold,
             );
             ExitCode::SUCCESS
         }

@@ -13,7 +13,7 @@
 mod common;
 
 use burn_audiomentations::{HighPassFilter, LowPassFilter, Transform, TransformRng};
-use common::{client, dtype_f32, read_tensor, rms, sine, upload_2d, Runtime};
+use common::{Runtime, client, dtype_f32, read_tensor, rms, sine, upload_2d};
 use cubecl::std::tensor::TensorHandle;
 
 const SR: u32 = 32_000;
@@ -170,7 +170,10 @@ fn per_row_rows_get_independent_cutoffs() {
         .map(|b| rms(&out_host[b * time..(b + 1) * time]))
         .collect();
     let min = rms_per_row.iter().cloned().fold(f32::INFINITY, f32::min);
-    let max = rms_per_row.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+    let max = rms_per_row
+        .iter()
+        .cloned()
+        .fold(f32::NEG_INFINITY, f32::max);
     assert!(
         max - min > 0.05,
         "per-row RMS should differ (got {min:.3}..{max:.3})",

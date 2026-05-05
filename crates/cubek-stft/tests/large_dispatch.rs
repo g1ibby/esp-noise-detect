@@ -21,7 +21,7 @@
 
 mod common;
 
-use common::{client, dtype_f32, upload_2d, upload_1d, read_tensor, Runtime};
+use common::{Runtime, client, dtype_f32, read_tensor, upload_1d, upload_2d};
 use cubecl::std::tensor::TensorHandle;
 use cubek_stft::stft;
 
@@ -65,7 +65,10 @@ fn stft_over_1d_dispatch_cap() {
             "frame {frame}: DC real = {dc_re}, want {}",
             N_FFT,
         );
-        assert!(dc_im.abs() < 1e-2, "frame {frame}: DC imag = {dc_im}, want 0");
+        assert!(
+            dc_im.abs() < 1e-2,
+            "frame {frame}: DC imag = {dc_im}, want 0"
+        );
         // Non-DC bins should be ~0 for the all-ones signal.
         let mid_re = re_host[base + n_freq / 2];
         assert!(

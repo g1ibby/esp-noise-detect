@@ -32,10 +32,7 @@ pub fn default_condition(num: u32, den: u32) -> bool {
 /// Enumerates all products of subsets of the prime factorization of
 /// `sample_rate`, then cross-pairs those products to form candidate
 /// ratios.
-pub fn get_fast_shifts(
-    sample_rate: u32,
-    condition: impl Fn(u32, u32) -> bool,
-) -> Vec<(u32, u32)> {
+pub fn get_fast_shifts(sample_rate: u32, condition: impl Fn(u32, u32) -> bool) -> Vec<(u32, u32)> {
     assert!(sample_rate > 0, "sample_rate must be > 0");
 
     let factors = prime_factors(sample_rate);
@@ -94,7 +91,7 @@ fn prime_factors(mut n: u32) -> Vec<u32> {
 fn distinct_subset_products(factors: &[u32]) -> Vec<u32> {
     let mut seen = std::collections::BTreeSet::new();
     seen.insert(1u32); // The empty subset's product — included so
-                      // `Fraction(1, prod)` candidates get formed.
+    // `Fraction(1, prod)` candidates get formed.
 
     // The factors can repeat. Multiset combinations of size `r` are
     // tricky to enumerate directly, but because we just need the set of
@@ -102,8 +99,7 @@ fn distinct_subset_products(factors: &[u32]) -> Vec<u32> {
     // distinct prime power count as a dimension.
     //
     // Group factors by their distinct value:
-    let mut grouped: std::collections::BTreeMap<u32, u32> =
-        std::collections::BTreeMap::new();
+    let mut grouped: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
     for &f in factors {
         *grouped.entry(f).or_insert(0) += 1;
     }

@@ -132,7 +132,10 @@ impl<R: Runtime> PitchShift<R> {
             min_semitones <= max_semitones,
             "min_semitones ({min_semitones}) > max_semitones ({max_semitones})",
         );
-        assert!(n_fft >= 2 && n_fft.is_power_of_two(), "n_fft must be a power of two ≥ 2");
+        assert!(
+            n_fft >= 2 && n_fft.is_power_of_two(),
+            "n_fft must be a power of two ≥ 2"
+        );
         assert!(hop > 0 && hop <= n_fft, "hop must be in (0, n_fft]");
         assert!(sample_rate > 0);
 
@@ -266,7 +269,13 @@ impl<R: Runtime> PitchShift<R> {
         );
 
         // 3. STFT — re / im shape: `(n, n_frames, n_freq)`.
-        let (re, im) = stft(padded, self.window.clone(), self.n_fft, self.hop, self.dtype);
+        let (re, im) = stft(
+            padded,
+            self.window.clone(),
+            self.n_fft,
+            self.hop,
+            self.dtype,
+        );
 
         // 4. Transpose last two dims → (n, n_freq, n_frames) for phase vocoder.
         let re_t = transpose_last_two(&self.client, re, self.dtype);
@@ -362,7 +371,8 @@ impl<R: Runtime> Transform<R> for PitchShift<R> {
         let identity_indices: Vec<u32> = (0..batch as u32).collect();
         let identity_t = TensorHandle::<R>::new_contiguous(
             vec![batch],
-            self.client.create_from_slice(u32::as_bytes(&identity_indices)),
+            self.client
+                .create_from_slice(u32::as_bytes(&identity_indices)),
             u32::as_type_native_unchecked().storage_type(),
         );
         let (cc, cd) = elemwise_launch(&self.client, batch * time);
@@ -440,11 +450,8 @@ fn transpose_last_two<R: Runtime>(
     assert_eq!(shape.len(), 3, "transpose_last_two expects rank-3 input");
     let num_elems: usize = shape.iter().product();
     let out_shape = vec![shape[0], shape[2], shape[1]];
-    let out = TensorHandle::<R>::new_contiguous(
-        out_shape,
-        client.empty(num_elems * dtype.size()),
-        dtype,
-    );
+    let out =
+        TensorHandle::<R>::new_contiguous(out_shape, client.empty(num_elems * dtype.size()), dtype);
     let (cc, cd) = elemwise_launch(client, num_elems);
     transpose_last_two_kernel::launch::<f32, R>(
         client,
@@ -507,11 +514,7 @@ pub(crate) fn scatter_rows_kernel<F: Float>(
 /// Reflection excludes the boundary sample itself, so for input
 /// `[a, b, c, d, e]` with `pad = 2` the output is `[c, b, a, b, c, d, e, d, c]`.
 #[cube(launch)]
-pub(crate) fn reflect_pad_kernel<F: Float>(
-    input: &Tensor<F>,
-    output: &mut Tensor<F>,
-    pad: u32,
-) {
+pub(crate) fn reflect_pad_kernel<F: Float>(input: &Tensor<F>, output: &mut Tensor<F>, pad: u32) {
     let pos = ABSOLUTE_POS;
     if pos >= output.len() {
         terminate!();
@@ -543,10 +546,7 @@ pub(crate) fn reflect_pad_kernel<F: Float>(
 /// `output[b, y, x] = input[b, x, y]` — transpose the last two dims of a
 /// rank-3 tensor.
 #[cube(launch)]
-pub(crate) fn transpose_last_two_kernel<F: Float>(
-    input: &Tensor<F>,
-    output: &mut Tensor<F>,
-) {
+pub(crate) fn transpose_last_two_kernel<F: Float>(input: &Tensor<F>, output: &mut Tensor<F>) {
     let pos = ABSOLUTE_POS;
     if pos >= output.len() {
         terminate!();
@@ -568,11 +568,7 @@ pub(crate) fn transpose_last_two_kernel<F: Float>(
 /// `output.shape(1)`; the kernel reads `start..start + output.shape(1)`
 /// from the corresponding row of `input`.
 #[cube(launch)]
-pub(crate) fn slice_time_kernel<F: Float>(
-    input: &Tensor<F>,
-    output: &mut Tensor<F>,
-    start: u32,
-) {
+pub(crate) fn slice_time_kernel<F: Float>(input: &Tensor<F>, output: &mut Tensor<F>, start: u32) {
     let pos = ABSOLUTE_POS;
     if pos >= output.len() {
         terminate!();
@@ -587,10 +583,7 @@ pub(crate) fn slice_time_kernel<F: Float>(
 /// Copy input into output, cropping if output is shorter and zero-padding
 /// if output is longer.
 #[cube(launch)]
-pub(crate) fn crop_or_pad_kernel<F: Float>(
-    input: &Tensor<F>,
-    output: &mut Tensor<F>,
-) {
+pub(crate) fn crop_or_pad_kernel<F: Float>(input: &Tensor<F>, output: &mut Tensor<F>) {
     let pos = ABSOLUTE_POS;
     if pos >= output.len() {
         terminate!();

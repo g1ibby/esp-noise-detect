@@ -90,9 +90,7 @@ impl KernelBank {
             for k_idx in 0..kernel_len {
                 let k = (k_idx as i64) - (width as i64);
                 // t = (-i/new_sr + k/old_sr) * sr
-                let t_raw = (-(i as f32) / new_sr as f32
-                    + (k as f32) / old_sr as f32)
-                    * sr;
+                let t_raw = (-(i as f32) / new_sr as f32 + (k as f32) / old_sr as f32) * sr;
                 let t = t_raw.clamp(-zeros_f, zeros_f) * PI;
                 let w = (t * half_zeros_inv).cos();
                 let w2 = w * w;
@@ -169,13 +167,10 @@ mod tests {
         let bank = KernelBank::new(4, 5, 24, 0.945);
         assert_eq!(bank.kernels.len(), 5 * bank.kernel_len as usize);
         for i in 0..bank.new_sr as usize {
-            let row = &bank.kernels
-                [i * bank.kernel_len as usize..(i + 1) * bank.kernel_len as usize];
+            let row =
+                &bank.kernels[i * bank.kernel_len as usize..(i + 1) * bank.kernel_len as usize];
             let s: f32 = row.iter().sum();
-            assert!(
-                (s - 1.0).abs() < 1e-5,
-                "row {i} sums to {s}, expected 1",
-            );
+            assert!((s - 1.0).abs() < 1e-5, "row {i} sums to {s}, expected 1",);
         }
     }
 

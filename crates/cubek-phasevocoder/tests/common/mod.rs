@@ -12,9 +12,9 @@
 
 use core::f32::consts::PI;
 
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 
 /// Backend selected at compile time via one of the `test-*` features.
 pub type Runtime = TestRuntime;
@@ -56,7 +56,13 @@ pub fn read_tensor(
 }
 
 pub fn max_abs_diff(a: &[f32], b: &[f32]) -> f32 {
-    assert_eq!(a.len(), b.len(), "length mismatch: {} vs {}", a.len(), b.len());
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "length mismatch: {} vs {}",
+        a.len(),
+        b.len()
+    );
     a.iter()
         .zip(b.iter())
         .map(|(x, y)| (x - y).abs())
@@ -179,16 +185,8 @@ pub fn phase_vocoder_cpu(
 
                 // Mirror the kernel's bounds-gated atan2 to stay
                 // numerically aligned (see kernel comment on atan2(0,0)).
-                let angle_0 = if idx0 < n_in {
-                    c0i.atan2(c0r)
-                } else {
-                    0.0
-                };
-                let angle_1 = if idx1 < n_in {
-                    c1i.atan2(c1r)
-                } else {
-                    0.0
-                };
+                let angle_0 = if idx0 < n_in { c0i.atan2(c0r) } else { 0.0 };
+                let angle_1 = if idx1 < n_in { c1i.atan2(c1r) } else { 0.0 };
                 let mut delta = angle_1 - angle_0 - pa;
                 delta -= two_pi * (delta / two_pi).round();
                 phase_acc += delta + pa;

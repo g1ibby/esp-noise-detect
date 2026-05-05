@@ -75,7 +75,8 @@ struct Overrides {
 }
 
 fn require<I: Iterator<Item = String>>(args: &mut I, name: &str) -> Result<String, String> {
-    args.next().ok_or_else(|| format!("{name} takes an argument"))
+    args.next()
+        .ok_or_else(|| format!("{name} takes an argument"))
 }
 
 fn parse_num<I: Iterator<Item = String>>(args: &mut I, name: &str) -> Result<usize, String> {
@@ -135,13 +136,8 @@ fn main() -> ExitCode {
 
     let device = SelectedDevice::default();
     let client = <SelectedRuntime as Runtime>::client(&device);
-    let trainer: Trainer<SelectedAutodiff, SelectedRuntime, f32, i32, u8> = Trainer::new(
-        cfg,
-        client,
-        device.clone(),
-        device,
-    )
-    .with_profile_stages(ov.profile_stages);
+    let trainer: Trainer<SelectedAutodiff, SelectedRuntime, f32, i32, u8> =
+        Trainer::new(cfg, client, device.clone(), device).with_profile_stages(ov.profile_stages);
 
     match trainer.fit() {
         Ok(out) => {
@@ -174,11 +170,6 @@ fn resolve_relative_manifest(cfg: &mut TrainAppConfig, config_path: &Path) {
         return;
     }
     if let Some(parent) = config_path.parent() {
-        cfg.dataset.manifest_path = Some(
-            parent
-                .join(&p)
-                .to_string_lossy()
-                .to_string(),
-        );
+        cfg.dataset.manifest_path = Some(parent.join(&p).to_string_lossy().to_string());
     }
 }

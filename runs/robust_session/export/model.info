@@ -1,0 +1,12 @@
+producer: burn-espdl-export
+input: input [1, 1, 64, 101]
+output: logits
+nodes:
+  00: Conv       input -> act_0_down_relu
+  01: Conv       act_0_down_relu -> act_0_refine_relu
+  02: Conv       act_0_refine_relu -> act_1_down_relu
+  03: Conv       act_1_down_relu -> act_1_refine_relu
+  04: Conv       act_1_refine_relu -> act_2_down_relu
+  05: Conv       act_2_down_relu -> act_2_refine_relu
+  06: ReduceMean act_2_refine_relu -> act_18
+  07: Gemm       act_18 -> logits

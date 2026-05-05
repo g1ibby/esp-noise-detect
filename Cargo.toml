@@ -7,7 +7,9 @@ members = [
     "crates/cubek-resample",
     "crates/cubek-sinc-filter",
     "crates/burn-audiomentations",
+    "crates/burn-espdl-export",
     "nn-rs",
+    "xtask",
 ]
 exclude = [
     "firmware",
@@ -68,6 +70,7 @@ cubek-phasevocoder = { path = "crates/cubek-phasevocoder", default-features = fa
 cubek-resample = { path = "crates/cubek-resample", default-features = false }
 cubek-sinc-filter = { path = "crates/cubek-sinc-filter", default-features = false }
 burn-audiomentations = { path = "crates/burn-audiomentations", default-features = false }
+burn-espdl-export = { path = "crates/burn-espdl-export", default-features = false }
 nn-rs = { path = "nn-rs", default-features = false }
 
 # Host-side dependencies

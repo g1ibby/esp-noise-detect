@@ -7,9 +7,7 @@
     feature = "test-cuda",
     feature = "test-cpu",
 )))]
-compile_error!(
-    "choose a test backend: --features test-metal | test-vulkan | test-cuda | test-cpu"
-);
+compile_error!("choose a test backend: --features test-metal | test-vulkan | test-cuda | test-cpu");
 
 // (2) test-cuda on macOS: would try to build cubecl-cuda and fail deep in
 //     a build.rs panic. Catch it up front.

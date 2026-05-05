@@ -24,7 +24,7 @@ use burn_audiomentations::PitchShift;
 
 mod common;
 
-use common::{client, dtype_f32, max_abs_diff, peak_abs, read_tensor, upload_2d, Runtime};
+use common::{Runtime, client, dtype_f32, max_abs_diff, peak_abs, read_tensor, upload_2d};
 
 struct Fixture {
     num: u32,
@@ -145,10 +145,7 @@ fn run(name: &str, tol: f32) {
         "[{name}] ratio={}/{} samples={} err={:.3e} peak={:.3e} tol={:.3e}",
         fx.num, fx.den, fx.samples, err, peak, tol,
     );
-    assert!(
-        err < tol,
-        "{name} drifted: err={err:.3e} >= tol={tol:.3e}",
-    );
+    assert!(err < tol, "{name} drifted: err={err:.3e} >= tol={tol:.3e}",);
 }
 
 #[test]

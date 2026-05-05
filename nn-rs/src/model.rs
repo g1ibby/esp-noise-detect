@@ -24,7 +24,8 @@
 
 use burn::module::Module;
 use burn::nn::{
-    BatchNorm, BatchNormConfig, Dropout, DropoutConfig, Linear, LinearConfig, PaddingConfig2d, Relu,
+    BatchNorm, BatchNormConfig, Dropout, DropoutConfig, Linear, LinearConfig, PaddingConfig2d,
+    Relu,
     conv::{Conv2d, Conv2dConfig},
 };
 use burn::prelude::*;

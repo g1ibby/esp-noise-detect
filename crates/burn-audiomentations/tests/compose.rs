@@ -13,10 +13,10 @@
 mod common;
 
 use burn_audiomentations::{
-    AddColoredNoise, Compose, Gain, HighPassFilter, LowPassFilter, PolarityInversion,
-    TimeMasking, Transform, TransformRng,
+    AddColoredNoise, Compose, Gain, HighPassFilter, LowPassFilter, PolarityInversion, TimeMasking,
+    Transform, TransformRng,
 };
-use common::{client, dtype_f32, max_abs_diff, read_tensor, synth_reals, upload_2d, Runtime};
+use common::{Runtime, client, dtype_f32, max_abs_diff, read_tensor, synth_reals, upload_2d};
 
 const SR: u32 = 32_000;
 
@@ -68,7 +68,10 @@ fn compose_with_all_zero_probabilities_is_identity() {
     );
     let got = read_tensor(&client, out);
     let err = max_abs_diff(&got, &sig);
-    assert!(err < 1e-6, "all-zero compose should be identity (err {err})");
+    assert!(
+        err < 1e-6,
+        "all-zero compose should be identity (err {err})"
+    );
 }
 
 #[test]
@@ -97,10 +100,7 @@ fn compose_sequential_order_is_observable() {
     let expected_ratio = -10f32.powf(6.0 / 20.0);
     for (i, (g, s)) in got.iter().zip(sig.iter()).enumerate() {
         let want = expected_ratio * s;
-        assert!(
-            (*g - want).abs() < 1e-5,
-            "idx {i}: got {g}, want {want}",
-        );
+        assert!((*g - want).abs() < 1e-5, "idx {i}: got {g}, want {want}",);
     }
 }
 

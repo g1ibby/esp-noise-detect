@@ -17,7 +17,9 @@
 
 mod common;
 
-use common::{client, dtype_f32, phase_advance_default, read_tensor, upload_1d, upload_3d, Runtime};
+use common::{
+    Runtime, client, dtype_f32, phase_advance_default, read_tensor, upload_1d, upload_3d,
+};
 use cubek_phasevocoder::phase_vocoder;
 
 const BATCH: usize = 8192;

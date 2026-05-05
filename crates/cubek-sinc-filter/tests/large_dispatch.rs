@@ -13,7 +13,7 @@
 
 mod common;
 
-use common::{client, dtype_f32, read_tensor, upload_2d, Runtime};
+use common::{Runtime, client, dtype_f32, read_tensor, upload_2d};
 use cubek_sinc_filter::{FilterMode, LowPassFilterBank};
 
 const BATCH: usize = 1;

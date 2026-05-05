@@ -100,11 +100,8 @@ impl<R: Runtime> FftConvSpectra<R> {
         }
 
         let handle = client.create_from_slice(f32::as_bytes(&padded));
-        let filters_padded = TensorHandle::<R>::new_contiguous(
-            vec![n_cutoffs, n_fft],
-            handle,
-            dtype,
-        );
+        let filters_padded =
+            TensorHandle::<R>::new_contiguous(vec![n_cutoffs, n_fft], handle, dtype);
 
         let (filter_re, filter_im) = cubek_fft::rfft::<R>(filters_padded, 1, dtype);
         let n_freq = n_fft / 2 + 1;

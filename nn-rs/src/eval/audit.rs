@@ -52,7 +52,11 @@ pub fn audit_key_of(path: &Path) -> (Option<u64>, Option<String>) {
 fn format_utc_day(ts: u64) -> String {
     let days = (ts / 86_400) as i64;
     let z = days + 719_468;
-    let era = if z >= 0 { z / 146_097 } else { (z - 146_096) / 146_097 };
+    let era = if z >= 0 {
+        z / 146_097
+    } else {
+        (z - 146_096) / 146_097
+    };
     let doe = (z - era * 146_097) as u64;
     let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
     let y_base = yoe as i64 + era * 400;
@@ -73,8 +77,16 @@ pub fn print_audit(files: &[&Path], probs: &[f32], labels: &[u8], threshold: f32
         println!("[audit] no window data available (set window_metrics: true)");
         return;
     }
-    assert_eq!(files.len(), probs.len(), "audit: files/probs length mismatch");
-    assert_eq!(files.len(), labels.len(), "audit: files/labels length mismatch");
+    assert_eq!(
+        files.len(),
+        probs.len(),
+        "audit: files/probs length mismatch"
+    );
+    assert_eq!(
+        files.len(),
+        labels.len(),
+        "audit: files/labels length mismatch"
+    );
 
     let mut per_session = HashMap::<u64, Bucket>::new();
     let mut per_day = HashMap::<String, Bucket>::new();
@@ -148,7 +160,10 @@ pub fn print_audit(files: &[&Path], probs: &[f32], labels: &[u8], threshold: f32
     }
 
     println!("\nBy session (worst-first, up to 15):");
-    println!("  {:>12} {:>5} {:>7}  TP TN FP FN", "session_ts", "n", "acc");
+    println!(
+        "  {:>12} {:>5} {:>7}  TP TN FP FN",
+        "session_ts", "n", "acc"
+    );
     let mut session_rows: Vec<_> = per_session.iter().collect();
     session_rows.sort_by(|a, b| {
         let acc_a = a.1.accuracy();
@@ -176,7 +191,13 @@ pub fn print_audit(files: &[&Path], probs: &[f32], labels: &[u8], threshold: f32
         let mut rows: Vec<_> = per_file_fp.iter().collect();
         rows.sort_by(|a, b| b.1.cmp(a.1));
         for (f, c) in rows.into_iter().take(top_n) {
-            println!("  {c:>4}  {}", Path::new(f).file_name().and_then(|s| s.to_str()).unwrap_or(f));
+            println!(
+                "  {c:>4}  {}",
+                Path::new(f)
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or(f)
+            );
         }
     }
     if !per_file_fn.is_empty() {
@@ -184,7 +205,13 @@ pub fn print_audit(files: &[&Path], probs: &[f32], labels: &[u8], threshold: f32
         let mut rows: Vec<_> = per_file_fn.iter().collect();
         rows.sort_by(|a, b| b.1.cmp(a.1));
         for (f, c) in rows.into_iter().take(top_n) {
-            println!("  {c:>4}  {}", Path::new(f).file_name().and_then(|s| s.to_str()).unwrap_or(f));
+            println!(
+                "  {c:>4}  {}",
+                Path::new(f)
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or(f)
+            );
         }
     }
     println!("{}", "=".repeat(72));

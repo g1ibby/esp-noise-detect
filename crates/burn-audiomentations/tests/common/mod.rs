@@ -7,9 +7,9 @@
 //! signatures, and reuse the LCG `synth_reals` generator so seeded signals
 //! look identical across the workspace.
 
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 
 // `Runtime` is a per-binary type alias for cubecl's TestRuntime — the
 // concrete backend is picked at `cargo test` time via one of the crate's
@@ -44,7 +44,13 @@ pub fn read_tensor(
 }
 
 pub fn max_abs_diff(a: &[f32], b: &[f32]) -> f32 {
-    assert_eq!(a.len(), b.len(), "length mismatch: {} vs {}", a.len(), b.len());
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "length mismatch: {} vs {}",
+        a.len(),
+        b.len()
+    );
     a.iter()
         .zip(b.iter())
         .map(|(x, y)| (x - y).abs())

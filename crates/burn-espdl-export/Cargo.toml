@@ -1,0 +1,18 @@
+[package]
+name        = "burn-espdl-export"
+version     = "0.1.0"
+edition     = "2024"
+license     = "MIT"
+publish     = false
+description = "Native Burn -> ESP-DL .espdl exporter for ESP32-S3 (PTQ, FlatBuffers, no Python)."
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+flatbuffers = "24"
+burn        = { workspace = true, features = ["std", "ndarray"] }
+burn-tensor = { workspace = true, features = ["std"] }
+
+[dev-dependencies]
+flatbuffers = "24"

@@ -13,5 +13,7 @@ pub mod audit;
 pub mod metrics;
 pub mod runner;
 
-pub use metrics::{BinaryMetrics, binary_metrics, calibrate_threshold, compute_auprc, compute_auroc};
+pub use metrics::{
+    BinaryMetrics, binary_metrics, calibrate_threshold, compute_auprc, compute_auroc,
+};
 pub use runner::{AggregateMode, EvalOptions, EvalOutcome, Evaluator};

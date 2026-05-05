@@ -12,9 +12,9 @@
 
 use std::time::Instant;
 
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 use cubek_fft::{irfft, rfft};
 use cubek_random::random_normal;
 

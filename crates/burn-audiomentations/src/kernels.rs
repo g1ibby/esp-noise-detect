@@ -31,10 +31,7 @@ pub(crate) fn elemwise_launch_dims<R: Runtime>(
 /// ±1). Out-of-range threads terminate; the kernel operates in place on
 /// a `(batch, time)` rank-2 tensor with row-major layout.
 #[cube(launch)]
-pub(crate) fn per_example_scale_kernel<F: Float>(
-    samples: &mut Tensor<F>,
-    scale: &Tensor<F>,
-) {
+pub(crate) fn per_example_scale_kernel<F: Float>(samples: &mut Tensor<F>, scale: &Tensor<F>) {
     let pos = ABSOLUTE_POS;
     if pos >= samples.len() {
         terminate!();
@@ -73,10 +70,7 @@ pub(crate) fn add_with_scale_kernel<F: Float>(
 /// loop ever flags this as a bottleneck we can drop in a proper
 /// cooperative reduction; today the one-thread-per-row variant is fine.
 #[cube(launch)]
-pub(crate) fn per_row_sum_sq_kernel<F: Float>(
-    x: &Tensor<F>,
-    out: &mut Tensor<F>,
-) {
+pub(crate) fn per_row_sum_sq_kernel<F: Float>(x: &Tensor<F>, out: &mut Tensor<F>) {
     let b = ABSOLUTE_POS;
     if b >= out.len() {
         terminate!();

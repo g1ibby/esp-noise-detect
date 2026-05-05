@@ -80,7 +80,10 @@ compile_error!(
 );
 
 // Metal on non-macOS: the MSL shader compiler is not available there.
-#[cfg(all(any(feature = "metal", feature = "test-metal"), not(target_os = "macos")))]
+#[cfg(all(
+    any(feature = "metal", feature = "test-metal"),
+    not(target_os = "macos")
+))]
 compile_error!(
     "the `metal` / `test-metal` features require macOS. \
      On Linux/NVIDIA use `--no-default-features --features \"std,cuda\"` \
@@ -122,9 +125,7 @@ mod backend_sel {
 ))]
 mod selected_aliases {
     use super::Trainer;
-    pub use super::backend_sel::{
-        SelectedAutodiff, SelectedCube, SelectedDevice, SelectedRuntime,
-    };
+    pub use super::backend_sel::{SelectedAutodiff, SelectedCube, SelectedDevice, SelectedRuntime};
 
     // Back-compat aliases so existing tests / `export_weights.rs` don't
     // need a mass rename in the same commit. Prefer `SelectedCube` /
@@ -279,8 +280,8 @@ where
         let ds_cfg = to_dataset_config(&self.cfg);
         let train_ds = WindowedAudioDataset::new(items.clone(), ds_cfg.clone(), Split::Train)
             .expect("build train dataset");
-        let val_ds = WindowedAudioDataset::new(items, ds_cfg, Split::Val)
-            .expect("build val dataset");
+        let val_ds =
+            WindowedAudioDataset::new(items, ds_cfg, Split::Val).expect("build val dataset");
 
         let artifact_dir = PathBuf::from(&self.cfg.trainer.artifact_dir);
         std::fs::create_dir_all(&artifact_dir)?;
@@ -396,9 +397,17 @@ where
                              [blk0={:.0} blk1={:.0} blk2={:.0} blk3={:.0} head={:.0}]  \
                              bwd={:.0}ms from_grads={:.0}ms opt={:.0}ms",
                             epoch_start.elapsed().as_secs_f32(),
-                            stages.aug_ms, stages.mel_ms, stages.fwd_ms,
-                            bf[0], bf[1], bf[2], bf[3], stages.head_fwd_ms,
-                            stages.bwd_ms, stages.from_grads_ms, stages.opt_ms,
+                            stages.aug_ms,
+                            stages.mel_ms,
+                            stages.fwd_ms,
+                            bf[0],
+                            bf[1],
+                            bf[2],
+                            bf[3],
+                            stages.head_fwd_ms,
+                            stages.bwd_ms,
+                            stages.from_grads_ms,
+                            stages.opt_ms,
                         );
                     } else {
                         println!(
@@ -420,10 +429,8 @@ where
                 let (logits, loss) = self.forward_eval(&model_valid, batch);
                 let loss_scalar = loss.into_scalar().elem::<f32>();
                 val_stats.add_loss(loss_scalar, batch_size);
-                let logits_vec =
-                    logits.into_data().convert::<f32>().to_vec::<f32>().unwrap();
-                let targets_vec =
-                    labels.into_data().convert::<i64>().to_vec::<i64>().unwrap();
+                let logits_vec = logits.into_data().convert::<f32>().to_vec::<f32>().unwrap();
+                let targets_vec = labels.into_data().convert::<i64>().to_vec::<i64>().unwrap();
                 val_stats.update(&logits_vec, &targets_vec);
             }
 
@@ -490,12 +497,9 @@ where
             None
         };
         let waveforms_aug = match self.augment_train.as_ref() {
-            Some(compose) => apply_augment::<R, F, I, BT>(
-                waveforms_inner,
-                compose,
-                rng,
-                &self.inner_device,
-            ),
+            Some(compose) => {
+                apply_augment::<R, F, I, BT>(waveforms_inner, compose, rng, &self.inner_device)
+            }
             None => waveforms_inner,
         };
         let aug_ms = if profile {
@@ -582,10 +586,7 @@ where
         &self,
         model: &<TinyConv<AB> as AutodiffModule<AB>>::InnerModule,
         batch: AudioBatch<AB::InnerBackend>,
-    ) -> (
-        Tensor<AB::InnerBackend, 2>,
-        Tensor<AB::InnerBackend, 1>,
-    ) {
+    ) -> (Tensor<AB::InnerBackend, 2>, Tensor<AB::InnerBackend, 1>) {
         let targets = batch.labels;
         let mel = self.mel.forward(batch.waveforms);
         let logits = model.forward(mel);
@@ -597,11 +598,7 @@ where
 
     /// Overfit a small set of batches for `steps` iterations — the Step
     /// 10 acceptance test. Returns the sequence of per-step losses.
-    pub fn overfit_batches(
-        &self,
-        batches: Vec<AudioBatch<AB>>,
-        steps: usize,
-    ) -> Vec<f32> {
+    pub fn overfit_batches(&self, batches: Vec<AudioBatch<AB>>, steps: usize) -> Vec<f32> {
         let model_cfg = to_tinyconv_config(&self.cfg.model);
         let mut model = model_cfg.init::<AB>(&self.device);
         let mut optim = build_optimizer::<AB>(&self.cfg.optim);
@@ -611,8 +608,7 @@ where
         let mut history = Vec::with_capacity(steps * batches.len());
         for _step in 0..steps {
             for batch in &batches {
-                let (_, loss, _) =
-                    self.forward_train(&model, clone_batch::<AB>(batch), &mut rng);
+                let (_, loss, _) = self.forward_train(&model, clone_batch::<AB>(batch), &mut rng);
                 let loss_scalar = loss.clone().into_scalar().elem::<f32>();
                 history.push(loss_scalar);
                 let grads = loss.backward();
@@ -733,23 +729,16 @@ fn build_loader<B: burn::tensor::backend::Backend>(
     seed: u64,
 ) -> Arc<dyn DataLoader<B, AudioBatch<B>>> {
     let batcher = AudioBatcher::<B>::new();
-    let mut builder = DataLoaderBuilder::<
-        B,
-        WindowedAudioItem,
-        AudioBatch<B>,
-    >::new(batcher)
-    .batch_size(batch_size)
-    .num_workers(num_workers);
+    let mut builder = DataLoaderBuilder::<B, WindowedAudioItem, AudioBatch<B>>::new(batcher)
+        .batch_size(batch_size)
+        .num_workers(num_workers);
     if shuffle {
         builder = builder.shuffle(seed);
     }
     builder.build(dataset)
 }
 
-fn save_checkpoint<AB: AutodiffBackend>(
-    model: &TinyConv<AB>,
-    path: &Path,
-) -> std::io::Result<()> {
+fn save_checkpoint<AB: AutodiffBackend>(model: &TinyConv<AB>, path: &Path) -> std::io::Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }

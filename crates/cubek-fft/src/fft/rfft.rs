@@ -112,8 +112,7 @@ pub fn rfft_launch<R: Runtime>(
     let cube_dim = CubeDim::new_1d(threads_per_cube as u32);
     // One cube per window, spread across X/Y/Z so we don't hit wgpu's
     // 65 535 X-axis dispatch cap at training-loop batch sizes.
-    let cube_count =
-        cubecl::calculate_cube_count_elemwise(client, count, CubeDim::new_single());
+    let cube_count = cubecl::calculate_cube_count_elemwise(client, count, CubeDim::new_single());
 
     rfft_kernel::launch::<f32, R>(
         client,

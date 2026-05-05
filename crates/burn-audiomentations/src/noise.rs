@@ -70,7 +70,11 @@ impl AddColoredNoise {
 
 impl<R: Runtime> Transform<R> for AddColoredNoise {
     fn apply(&self, samples: TensorHandle<R>, rng: &mut TransformRng) -> TensorHandle<R> {
-        assert_eq!(samples.shape().len(), 2, "AddColoredNoise expects (batch, time)");
+        assert_eq!(
+            samples.shape().len(),
+            2,
+            "AddColoredNoise expects (batch, time)"
+        );
         let batch = samples.shape()[0];
         let num_samples = samples.shape()[1];
         assert!(batch > 0 && num_samples > 0);
@@ -79,8 +83,7 @@ impl<R: Runtime> Transform<R> for AddColoredNoise {
         let mask = bernoulli_mask(batch, self.probability, rng.host());
         let snr_db =
             sample_uniform_batch(batch, self.min_snr_in_db, self.max_snr_in_db, rng.host());
-        let f_decay =
-            sample_uniform_batch(batch, self.min_f_decay, self.max_f_decay, rng.host());
+        let f_decay = sample_uniform_batch(batch, self.min_f_decay, self.max_f_decay, rng.host());
 
         // 2. Chunk layout. We want the largest power-of-two chunk size that
         //    both fits the 4096-sample FFT cap and is ≤ num_samples.
@@ -112,8 +115,7 @@ impl<R: Runtime> Transform<R> for AddColoredNoise {
 
         // Upload (batch,) f_decay for the mask kernel.
         let f_decay_handle = client.create_from_slice(f32::as_bytes(&f_decay));
-        let f_decay_t =
-            TensorHandle::<R>::new_contiguous(vec![batch], f_decay_handle, dtype);
+        let f_decay_t = TensorHandle::<R>::new_contiguous(vec![batch], f_decay_handle, dtype);
 
         // `linspace(1, sqrt(sample_rate/2), n_freq)` frequency envelope.
         let fs_sqrt = (self.sample_rate as f32 / 2.0).sqrt();
@@ -145,11 +147,8 @@ impl<R: Runtime> Transform<R> for AddColoredNoise {
         let shaped = irfft(spec_re, spec_im, 2, dtype);
         // Reshape (batch, n_chunks, chunk) → (batch, padded) conceptually;
         // since the storage is already contiguous we just re-label.
-        let shaped_2d = TensorHandle::<R>::new_contiguous(
-            vec![batch, padded],
-            shaped.handle,
-            dtype,
-        );
+        let shaped_2d =
+            TensorHandle::<R>::new_contiguous(vec![batch, padded], shaped.handle, dtype);
         // `padded >= num_samples` always; if padded > num_samples we'll
         // just ignore the trailing samples in the mix kernel by reading
         // from `[0, num_samples)`.
@@ -216,11 +215,8 @@ impl<R: Runtime> Transform<R> for AddColoredNoise {
         //    creating a view at the same offset — the storage is already
         //    contiguous and row-major and the trailing `padded - num_samples`
         //    columns are never read by the add kernel.
-        let noise_signal_view = TensorHandle::<R>::new_contiguous(
-            vec![batch, padded],
-            shaped_2d.handle.clone(),
-            dtype,
-        );
+        let noise_signal_view =
+            TensorHandle::<R>::new_contiguous(vec![batch, padded], shaped_2d.handle.clone(), dtype);
 
         let scale_handle = client.create_from_slice(f32::as_bytes(&scales));
         let scale_t = TensorHandle::<R>::new_contiguous(vec![batch], scale_handle, dtype);

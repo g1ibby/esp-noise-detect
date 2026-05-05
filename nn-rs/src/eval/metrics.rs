@@ -272,7 +272,11 @@ mod tests {
         let y_prob = [0.1_f32, 0.2, 0.8, 0.9];
         let t = calibrate_threshold(&y_true, &y_prob);
         let m = binary_metrics(&y_true, &y_prob, t);
-        assert!((m.macro_f1 - 1.0).abs() < 1e-9, "t={t} macro_f1={}", m.macro_f1);
+        assert!(
+            (m.macro_f1 - 1.0).abs() < 1e-9,
+            "t={t} macro_f1={}",
+            m.macro_f1
+        );
     }
 
     #[test]
@@ -292,6 +296,9 @@ mod tests {
             threshold: 0.5,
         };
         let json = serde_json::to_string(&m).unwrap();
-        assert!(json.contains("\"fn\":0"), "fn_ field must serialize as `fn`: {json}");
+        assert!(
+            json.contains("\"fn\":0"),
+            "fn_ field must serialize as `fn`: {json}"
+        );
     }
 }

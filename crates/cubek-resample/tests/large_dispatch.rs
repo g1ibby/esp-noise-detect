@@ -14,7 +14,7 @@
 
 mod common;
 
-use common::{client, dtype_f32, read_tensor, upload_2d, Runtime};
+use common::{Runtime, client, dtype_f32, read_tensor, upload_2d};
 use cubek_resample::Resampler;
 
 const BATCH: usize = 1;
@@ -27,7 +27,8 @@ fn resample_over_1d_dispatch_cap() {
     let client = client();
 
     let sig = vec![1.0f32; BATCH * TIME];
-    let resampler = Resampler::<Runtime>::new(client.clone(), OLD_SR, NEW_SR, 24, 0.945, dtype_f32());
+    let resampler =
+        Resampler::<Runtime>::new(client.clone(), OLD_SR, NEW_SR, 24, 0.945, dtype_f32());
     let out = resampler.apply(upload_2d(&client, &sig, BATCH, TIME), None);
 
     let out_shape = out.shape().clone();

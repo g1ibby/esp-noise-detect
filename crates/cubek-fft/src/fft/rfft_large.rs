@@ -40,10 +40,7 @@ use core::f32::consts::PI;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
 
-use crate::fft::{
-    FftMode,
-    cfft::cfft_launch_any_size,
-};
+use crate::fft::{FftMode, cfft::cfft_launch_any_size};
 
 /// Forward large-`n_fft` RFFT. Shapes:
 /// * `signal`: (..., n_fft) real.
@@ -87,8 +84,7 @@ pub(crate) fn rfft_large_launch<R: Runtime>(
     // Step 1: pack x → y.
     {
         let cube_dim = CubeDim::new_1d(256);
-        let cube_count =
-            cubecl::calculate_cube_count_elemwise(client, count * m, cube_dim);
+        let cube_count = cubecl::calculate_cube_count_elemwise(client, count * m, cube_dim);
 
         rfft_pack_kernel::launch::<f32, R>(
             client,
@@ -118,8 +114,7 @@ pub(crate) fn rfft_large_launch<R: Runtime>(
     {
         let n_freq = m + 1;
         let cube_dim = CubeDim::new_1d(256);
-        let cube_count =
-            cubecl::calculate_cube_count_elemwise(client, count * n_freq, cube_dim);
+        let cube_count = cubecl::calculate_cube_count_elemwise(client, count * n_freq, cube_dim);
 
         rfft_post_kernel::launch::<f32, R>(
             client,
@@ -189,8 +184,7 @@ pub(crate) fn irfft_large_launch<R: Runtime>(
     // Step 1: build packed Y from half-spectrum X.
     {
         let cube_dim = CubeDim::new_1d(256);
-        let cube_count =
-            cubecl::calculate_cube_count_elemwise(client, count * m, cube_dim);
+        let cube_count = cubecl::calculate_cube_count_elemwise(client, count * m, cube_dim);
 
         irfft_pre_kernel::launch::<f32, R>(
             client,
@@ -223,8 +217,7 @@ pub(crate) fn irfft_large_launch<R: Runtime>(
     // Step 3: unpack y into real x with the 1/M normalisation.
     {
         let cube_dim = CubeDim::new_1d(256);
-        let cube_count =
-            cubecl::calculate_cube_count_elemwise(client, count * m, cube_dim);
+        let cube_count = cubecl::calculate_cube_count_elemwise(client, count * m, cube_dim);
 
         irfft_unpack_kernel::launch::<f32, R>(
             client,
@@ -321,10 +314,8 @@ fn rfft_post_kernel<F: Float>(
         //   2 X[k]  = A*(1 - i*W) + B*(1 + i*W)
         let one_plus_s = F::new(1.0) + s;
         let one_minus_s = F::new(1.0) - s;
-        let x_re = F::new(0.5)
-            * (a_re * one_plus_s + a_im * c + b_re * one_minus_s - b_im * c);
-        let x_im = F::new(0.5)
-            * (a_im * one_plus_s - a_re * c + b_re * c + b_im * one_minus_s);
+        let x_re = F::new(0.5) * (a_re * one_plus_s + a_im * c + b_re * one_minus_s - b_im * c);
+        let x_im = F::new(0.5) * (a_im * one_plus_s - a_re * c + b_re * c + b_im * one_minus_s);
         spectrum_re[pos] = x_re;
         spectrum_im[pos] = x_im;
     }
@@ -388,10 +379,8 @@ fn irfft_pre_kernel<F: Float>(
         //   2 Y[k] = A*(1 + i*W) + B*(1 - i*W).
         let one_plus_s = F::new(1.0) + s;
         let one_minus_s = F::new(1.0) - s;
-        let y_re = F::new(0.5)
-            * (x_re * one_minus_s - x_im * c + xm_re * one_plus_s + xm_im * c);
-        let y_im = F::new(0.5)
-            * (x_im * one_minus_s + x_re * c - xm_re * c + xm_im * one_plus_s);
+        let y_re = F::new(0.5) * (x_re * one_minus_s - x_im * c + xm_re * one_plus_s + xm_im * c);
+        let y_im = F::new(0.5) * (x_im * one_minus_s + x_re * c - xm_re * c + xm_im * one_plus_s);
         packed_re[pos] = y_re;
         packed_im[pos] = y_im;
     }

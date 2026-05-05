@@ -9,8 +9,8 @@
 mod common;
 
 use common::{
-    client, dtype_f32, max_abs_diff, peak_abs, read_tensor, stft_cpu, synthesize_signal,
-    upload_1d, upload_2d,
+    client, dtype_f32, max_abs_diff, peak_abs, read_tensor, stft_cpu, synthesize_signal, upload_1d,
+    upload_2d,
 };
 use cubek_stft::stft;
 use cubek_stft::window::hann_window_periodic;

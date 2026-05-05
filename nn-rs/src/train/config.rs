@@ -184,8 +184,8 @@ impl DataModuleCfg {
         if let Some(n) = self.num_workers {
             return n;
         }
-        let base = performance_core_count()
-            .unwrap_or_else(|| num_physical_cpus().saturating_sub(1));
+        let base =
+            performance_core_count().unwrap_or_else(|| num_physical_cpus().saturating_sub(1));
         base.clamp(2, 4)
     }
 }
@@ -195,11 +195,7 @@ fn num_physical_cpus() -> usize {
     // Fall back to logical cores via `std::thread::available_parallelism`
     // if the probe fails (unlikely in practice but cheap to guard).
     sysinfo::System::physical_core_count()
-        .or_else(|| {
-            std::thread::available_parallelism()
-                .ok()
-                .map(|n| n.get())
-        })
+        .or_else(|| std::thread::available_parallelism().ok().map(|n| n.get()))
         .unwrap_or(4)
 }
 

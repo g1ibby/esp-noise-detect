@@ -3,11 +3,11 @@
 #
 # Step 13 of MIGRATION_PLAN.md. Wraps:
 #   1. nn-rs `export_weights`     (Rust, wgpu/Metal)
-#   2. nn-rs/python/burn_to_onnx  (PyTorch + onnxslim)
+#   2. nn-rs/python/burn_to_onnx  (uv + PyTorch + onnxslim)
 #   3. esp-ppq docker container   (PTQ INT8 → .espdl)
 #
 # Usage:
-#   scripts/burn_to_espdl.sh \
+#   scripts/burn_to_espdl_legacy.sh \
 #       --checkpoint /tmp/nn-rs-robust-smoke/checkpoints/best.mpk \
 #       --manifest   /path/to/manifest.jsonl \
 #       --out-dir    /tmp/nn-rs-robust-smoke/export
@@ -70,15 +70,13 @@ cargo run --release -p nn-rs --features metal --bin export_weights -- \
 
 echo ""
 echo "==[2/3] safetensors → ONNX ==========================================="
-VENV_PY="$REPO_ROOT/nn/.venv/bin/python"
-if [[ ! -x "$VENV_PY" ]]; then
-    echo "nn/.venv not found — create with: cd nn && uv venv .venv && uv pip install -e .[dev,export]"
-    echo "Also install safetensors: nn/.venv/bin/python -m uv pip install safetensors"
+if ! command -v uv >/dev/null 2>&1; then
+    echo "uv not found — install it first: https://docs.astral.sh/uv/getting-started/installation/" >&2
     exit 2
 fi
 
 echo "==[3/3] ONNX → .espdl (via esp-ppq docker) ==========================="
-"$VENV_PY" nn-rs/python/burn_to_onnx.py \
+uv run --project "$REPO_ROOT/nn" --extra export --with safetensors python nn-rs/python/burn_to_onnx.py \
     --weights        "$SAFETENSORS" \
     --config         "$CONFIG" \
     --manifest       "$MANIFEST" \

@@ -17,14 +17,7 @@ use common::{
 };
 use cubek_phasevocoder::phase_vocoder;
 
-fn run_parity(
-    b: usize,
-    n_freq: usize,
-    n_in: usize,
-    hop: usize,
-    rate: f32,
-    seed: u64,
-) {
+fn run_parity(b: usize, n_freq: usize, n_in: usize, hop: usize, rate: f32, seed: u64) {
     let client = client();
     let dtype = dtype_f32();
 
@@ -35,7 +28,8 @@ fn run_parity(
     let im_tensor = upload_3d(&client, &im, b, n_freq, n_in);
     let pa_tensor = upload_1d(&client, &pa);
 
-    let (out_re_tensor, out_im_tensor) = phase_vocoder(re_tensor, im_tensor, pa_tensor, rate, dtype);
+    let (out_re_tensor, out_im_tensor) =
+        phase_vocoder(re_tensor, im_tensor, pa_tensor, rate, dtype);
     let actual_re = read_tensor(&client, out_re_tensor);
     let actual_im = read_tensor(&client, out_im_tensor);
 

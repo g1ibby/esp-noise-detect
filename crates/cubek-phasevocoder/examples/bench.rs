@@ -30,9 +30,9 @@
 
 use std::time::Instant;
 
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 
 use cubek_fft::{irfft, rfft};
 use cubek_phasevocoder::phase_vocoder;
@@ -100,7 +100,10 @@ fn main() {
 
     for &batch in BATCHES {
         println!("======================================");
-        println!("== batch = {}   (tensor shape = ({}, {}))", batch, batch, TIME);
+        println!(
+            "== batch = {}   (tensor shape = ({}, {}))",
+            batch, batch, TIME
+        );
         println!("======================================");
         println!(
             "  derived launch-grids:\n    stft rfft:           cube_count = {:>8} (one thread per cube — wgpu caps X at 65535)\n    istft irfft:         cube_count = {:>8} (ditto)\n    phase_vocoder:       threads     = {:>8}\n    stft frame+window:   threads     = {:>8}\n    istft overlap-add:   threads     = {:>8}",
@@ -202,14 +205,19 @@ fn run_for_batch(
 
     println!("  [per-stage]");
 
-    bench("stft         (full: frame+window + rfft)", WARMUP, ITERS, || {
-        let padded = upload_padded(client);
-        let win = upload_window(client);
-        let (re, im) = stft::<R>(padded, win, N_FFT, HOP, dtype);
-        cubecl::future::block_on(client.sync()).unwrap();
-        drop(re);
-        drop(im);
-    });
+    bench(
+        "stft         (full: frame+window + rfft)",
+        WARMUP,
+        ITERS,
+        || {
+            let padded = upload_padded(client);
+            let win = upload_window(client);
+            let (re, im) = stft::<R>(padded, win, N_FFT, HOP, dtype);
+            cubecl::future::block_on(client.sync()).unwrap();
+            drop(re);
+            drop(im);
+        },
+    );
     bench("  rfft only  (pre-framed input)", WARMUP, ITERS, || {
         let frames = upload_frames(client);
         let (re, im) = rfft::<R>(frames, 2, dtype);
@@ -228,14 +236,19 @@ fn run_for_batch(
         drop(im2);
     });
 
-    bench("istft        (full: irfft + overlap-add)", WARMUP, ITERS, || {
-        let re = upload_spec(client, n_out_frames);
-        let im = upload_spec(client, n_out_frames);
-        let win = upload_window(client);
-        let sig = istft::<R>(re, im, win, HOP, dtype);
-        cubecl::future::block_on(client.sync()).unwrap();
-        drop(sig);
-    });
+    bench(
+        "istft        (full: irfft + overlap-add)",
+        WARMUP,
+        ITERS,
+        || {
+            let re = upload_spec(client, n_out_frames);
+            let im = upload_spec(client, n_out_frames);
+            let win = upload_window(client);
+            let sig = istft::<R>(re, im, win, HOP, dtype);
+            cubecl::future::block_on(client.sync()).unwrap();
+            drop(sig);
+        },
+    );
     bench("  irfft only", WARMUP, ITERS, || {
         let re = upload_spec(client, n_out_frames);
         let im = upload_spec(client, n_out_frames);
@@ -244,12 +257,17 @@ fn run_for_batch(
         drop(sig);
     });
 
-    bench("resample     (on iSTFT-shaped output)", WARMUP, ITERS, || {
-        let sig = upload_istft_out(client);
-        let out = resampler.apply(sig, None);
-        cubecl::future::block_on(client.sync()).unwrap();
-        drop(out);
-    });
+    bench(
+        "resample     (on iSTFT-shaped output)",
+        WARMUP,
+        ITERS,
+        || {
+            let sig = upload_istft_out(client);
+            let out = resampler.apply(sig, None);
+            cubecl::future::block_on(client.sync()).unwrap();
+            drop(out);
+        },
+    );
 
     // --- end-to-end ------------------------------------------------------
     println!();
@@ -262,11 +280,8 @@ fn run_for_batch(
             let win = upload_window(client);
             let pa = upload_pa(client);
             let padded_handle = client.create_from_slice(f32::as_bytes(&padded_host));
-            let padded = TensorHandle::<R>::new_contiguous(
-                vec![batch, padded_time],
-                padded_handle,
-                dtype,
-            );
+            let padded =
+                TensorHandle::<R>::new_contiguous(vec![batch, padded_time], padded_handle, dtype);
 
             let (re, im) = stft::<R>(padded, win.clone(), N_FFT, HOP, dtype);
             let re_t = transpose_last_two(client, re, dtype);
@@ -298,8 +313,7 @@ fn bench(label: &str, warmup: usize, iters: usize, mut f: impl FnMut()) {
     samples_ms.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let min_ms = samples_ms[0];
     let med_ms = samples_ms[samples_ms.len() / 2];
-    let p99_idx = ((samples_ms.len() as f64 * 0.99).ceil() as usize)
-        .min(samples_ms.len() - 1);
+    let p99_idx = ((samples_ms.len() as f64 * 0.99).ceil() as usize).min(samples_ms.len() - 1);
     let p99_ms = samples_ms[p99_idx];
 
     println!(
@@ -322,11 +336,8 @@ fn transpose_last_two(
     assert_eq!(shape.len(), 3);
     let num_elems: usize = shape.iter().product();
     let out_shape = vec![shape[0], shape[2], shape[1]];
-    let out = TensorHandle::<R>::new_contiguous(
-        out_shape,
-        client.empty(num_elems * dtype.size()),
-        dtype,
-    );
+    let out =
+        TensorHandle::<R>::new_contiguous(out_shape, client.empty(num_elems * dtype.size()), dtype);
     let cube_dim = CubeDim::new_1d(256);
     let cube_count = cubecl::calculate_cube_count_elemwise(client, num_elems, cube_dim);
     transpose_last_two_kernel::launch::<f32, R>(

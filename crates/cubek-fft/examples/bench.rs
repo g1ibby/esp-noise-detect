@@ -8,9 +8,9 @@
 
 use std::time::Instant;
 
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 use cubek_fft::{irfft, rfft};
 
 // Pick the backend at `cargo build` time via one of the crate's `test-*`
@@ -61,7 +61,12 @@ fn upload_2d_spec(
     (re, im)
 }
 
-fn bench_rfft(client: &cubecl::client::ComputeClient<R>, dtype: StorageType, batch: usize, n: usize) {
+fn bench_rfft(
+    client: &cubecl::client::ComputeClient<R>,
+    dtype: StorageType,
+    batch: usize,
+    n: usize,
+) {
     // warmup
     for _ in 0..WARMUP {
         let sig = upload_2d(client, batch, n, dtype);
@@ -79,10 +84,18 @@ fn bench_rfft(client: &cubecl::client::ComputeClient<R>, dtype: StorageType, bat
         samples_ms.push(t0.elapsed().as_secs_f64() * 1e3);
         drop((re, im));
     }
-    summarize(&format!("rfft  (batch={}, n_fft={})", batch, n), &mut samples_ms);
+    summarize(
+        &format!("rfft  (batch={}, n_fft={})", batch, n),
+        &mut samples_ms,
+    );
 }
 
-fn bench_irfft(client: &cubecl::client::ComputeClient<R>, dtype: StorageType, batch: usize, n: usize) {
+fn bench_irfft(
+    client: &cubecl::client::ComputeClient<R>,
+    dtype: StorageType,
+    batch: usize,
+    n: usize,
+) {
     let n_freq = n / 2 + 1;
     for _ in 0..WARMUP {
         let (re, im) = upload_2d_spec(client, batch, n_freq, dtype);
@@ -100,7 +113,10 @@ fn bench_irfft(client: &cubecl::client::ComputeClient<R>, dtype: StorageType, ba
         samples_ms.push(t0.elapsed().as_secs_f64() * 1e3);
         drop(sig);
     }
-    summarize(&format!("irfft (batch={}, n_fft={})", batch, n), &mut samples_ms);
+    summarize(
+        &format!("irfft (batch={}, n_fft={})", batch, n),
+        &mut samples_ms,
+    );
 }
 
 fn main() {

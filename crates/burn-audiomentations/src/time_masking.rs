@@ -57,7 +57,11 @@ impl TimeMasking {
 
 impl<R: Runtime> Transform<R> for TimeMasking {
     fn apply(&self, samples: TensorHandle<R>, rng: &mut TransformRng) -> TensorHandle<R> {
-        assert_eq!(samples.shape().len(), 2, "TimeMasking expects (batch, time)");
+        assert_eq!(
+            samples.shape().len(),
+            2,
+            "TimeMasking expects (batch, time)"
+        );
         let batch = samples.shape()[0];
         let time = samples.shape()[1];
         assert!(batch > 0 && time > 0);
@@ -180,8 +184,8 @@ pub(crate) fn splice_out_kernel<F: Float>(
         let denom = F::cast_from(length as u32 - 1u32);
         let two_pi = F::new(2.0 * core::f32::consts::PI);
         let hann_l = F::new(0.5) * (F::new(1.0) - F::cos(two_pi * F::cast_from(k as u32) / denom));
-        let hann_r = F::new(0.5)
-            * (F::new(1.0) - F::cos(two_pi * F::cast_from((half + k) as u32) / denom));
+        let hann_r =
+            F::new(0.5) * (F::new(1.0) - F::cos(two_pi * F::cast_from((half + k) as u32) / denom));
         let fading_out = input[row_base + start + k];
         let fading_in = input[row_base + start + half + k];
         out_val = hann_r * fading_out + hann_l * fading_in;

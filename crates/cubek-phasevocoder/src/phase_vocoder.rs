@@ -96,11 +96,8 @@ pub fn phase_vocoder<R: Runtime>(
         client.empty(num_elems * dtype.size()),
         dtype,
     );
-    let out_im = TensorHandle::<R>::new_contiguous(
-        out_shape,
-        client.empty(num_elems * dtype.size()),
-        dtype,
-    );
+    let out_im =
+        TensorHandle::<R>::new_contiguous(out_shape, client.empty(num_elems * dtype.size()), dtype);
 
     // One thread per (batch, freq) pair. Inner loop walks t sequentially.
     let total_threads = batch * n_freq;

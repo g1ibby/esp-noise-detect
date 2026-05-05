@@ -10,7 +10,7 @@
 
 mod common;
 
-use common::{client, dtype_f32, read_tensor, upload_2d, Runtime};
+use common::{Runtime, client, dtype_f32, read_tensor, upload_2d};
 use cubek_sinc_filter::{FilterMode, LowPassFilterBank};
 
 fn pure_tone(n: usize, sample_rate: f32, freq: f32) -> Vec<f32> {
@@ -154,9 +154,9 @@ fn dc_is_preserved_by_lowpass() {
     // Replicate-pad at both edges means DC is preserved everywhere, not
     // just in the interior. f32 dot-product rounding bounds the error at a
     // handful of ULPs × filter_len.
-    let peak = out
-        .iter()
-        .map(|v| (v - 0.7).abs())
-        .fold(0.0f32, f32::max);
-    assert!(peak < 1e-5, "DC drifted under low-pass: peak diff {peak:.3e}");
+    let peak = out.iter().map(|v| (v - 0.7).abs()).fold(0.0f32, f32::max);
+    assert!(
+        peak < 1e-5,
+        "DC drifted under low-pass: peak diff {peak:.3e}"
+    );
 }

@@ -7,8 +7,8 @@
 mod common;
 
 use common::{
-    client, dtype_f32, max_abs_diff, peak_abs, read_tensor, resample_cpu, synth_reals, upload_2d,
-    Runtime,
+    Runtime, client, dtype_f32, max_abs_diff, peak_abs, read_tensor, resample_cpu, synth_reals,
+    upload_2d,
 };
 use cubek_resample::Resampler;
 
@@ -36,14 +36,7 @@ fn mix_of_three_ratios_matches_per_row_reference() {
         let b_end = b_start + rows_per_config;
         let group_signal = &signals[b_start * time..b_end * time];
 
-        let resampler = Resampler::<Runtime>::new(
-            client.clone(),
-            old_sr,
-            new_sr,
-            24,
-            0.945,
-            dtype,
-        );
+        let resampler = Resampler::<Runtime>::new(client.clone(), old_sr, new_sr, 24, 0.945, dtype);
         let signal_t = upload_2d(&client, group_signal, rows_per_config, time);
         let out_t = resampler.apply(signal_t, None);
         let actual = read_tensor(&client, out_t);
@@ -87,14 +80,7 @@ fn batched_single_ratio_matches_row_by_row_reference() {
     }
     let signal_t = upload_2d(&client, &signals, batch, time);
 
-    let resampler = Resampler::<Runtime>::new(
-        client.clone(),
-        3,
-        4,
-        24,
-        0.945,
-        dtype,
-    );
+    let resampler = Resampler::<Runtime>::new(client.clone(), 3, 4, 24, 0.945, dtype);
     let out_t = resampler.apply(signal_t, None);
     let actual = read_tensor(&client, out_t);
 
@@ -113,14 +99,7 @@ fn identity_passes_through_unchanged() {
     let signal = synth_reals(time, 123);
     let signal_t = upload_2d(&client, &signal, 1, time);
 
-    let resampler = Resampler::<Runtime>::new(
-        client.clone(),
-        44_100,
-        44_100,
-        24,
-        0.945,
-        dtype,
-    );
+    let resampler = Resampler::<Runtime>::new(client.clone(), 44_100, 44_100, 24, 0.945, dtype);
     let out_t = resampler.apply(signal_t, None);
     let actual = read_tensor(&client, out_t);
 

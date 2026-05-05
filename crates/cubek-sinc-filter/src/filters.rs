@@ -70,10 +70,7 @@ impl FilterBank {
             .copied()
             .filter(|&c| c > 0.0)
             .fold(f32::INFINITY, f32::min);
-        assert!(
-            min_positive.is_finite(),
-            "at least one cutoff must be > 0",
-        );
+        assert!(min_positive.is_finite(), "at least one cutoff must be > 0",);
         let half_size = (zeros as f32 / min_positive / 2.0).floor() as u32;
         assert!(
             half_size > 0,
@@ -89,7 +86,8 @@ impl FilterBank {
         let filter_len_f = filter_len as f64;
         let mut hann = vec![0.0f64; filter_len as usize];
         for n in 0..filter_len as usize {
-            hann[n] = 0.5 * (1.0 - (2.0 * core::f64::consts::PI * n as f64 / (filter_len_f - 1.0)).cos());
+            hann[n] =
+                0.5 * (1.0 - (2.0 * core::f64::consts::PI * n as f64 / (filter_len_f - 1.0)).cos());
         }
 
         let mut weights = vec![0.0f32; (cutoffs.len()) * (filter_len as usize)];
@@ -160,8 +158,8 @@ mod tests {
         assert_eq!(bank.half_size, 80);
         assert_eq!(bank.filter_len, 161);
         for row in 0..bank.n_cutoffs as usize {
-            let r = &bank.weights
-                [row * bank.filter_len as usize..(row + 1) * bank.filter_len as usize];
+            let r =
+                &bank.weights[row * bank.filter_len as usize..(row + 1) * bank.filter_len as usize];
             let s: f32 = r.iter().sum();
             assert!(
                 (s - 1.0).abs() < 1e-6,
@@ -216,8 +214,8 @@ mod tests {
         // a regression here usually means a sign-flip somewhere.
         let bank = FilterBank::new(&[0.1, 0.2], 8);
         for row in 0..bank.n_cutoffs as usize {
-            let r = &bank.weights
-                [row * bank.filter_len as usize..(row + 1) * bank.filter_len as usize];
+            let r =
+                &bank.weights[row * bank.filter_len as usize..(row + 1) * bank.filter_len as usize];
             for k in 0..bank.half_size as usize {
                 let lhs = r[k];
                 let rhs = r[r.len() - 1 - k];

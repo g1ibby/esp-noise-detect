@@ -27,7 +27,9 @@ use cubek_sinc_filter::{FilterMode, LowPassFilterBank};
 
 mod common;
 
-use common::{client, dtype_f32, max_abs_diff, peak_abs, read_tensor, upload_2d, upload_indices, Runtime};
+use common::{
+    Runtime, client, dtype_f32, max_abs_diff, peak_abs, read_tensor, upload_2d, upload_indices,
+};
 
 struct Fixture {
     batch: usize,
@@ -105,7 +107,16 @@ fn load(name: &str) -> Fixture {
     cursor += out_len * 4;
     assert_eq!(cursor, bytes.len(), "fixture {name} trailing bytes");
 
-    Fixture { batch, time, cutoffs, zeros, mode, indices, input, output }
+    Fixture {
+        batch,
+        time,
+        cutoffs,
+        zeros,
+        mode,
+        indices,
+        input,
+        output,
+    }
 }
 
 fn run_per_row(name: &str, tol: f32) {

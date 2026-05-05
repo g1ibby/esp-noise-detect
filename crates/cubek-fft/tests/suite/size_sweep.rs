@@ -35,15 +35,20 @@ fn rfft_dc_probe_sweep() {
         let n_freq = n_fft / 2 + 1;
         let sig_data = vec![1.0f32; BATCH * n_fft];
         let sig_handle = client.create_from_slice(f32::as_bytes(&sig_data));
-        let signal = TensorHandle::<TestRuntime>::new_contiguous(
-            vec![BATCH, n_fft],
-            sig_handle,
-            dtype,
-        );
+        let signal =
+            TensorHandle::<TestRuntime>::new_contiguous(vec![BATCH, n_fft], sig_handle, dtype);
 
         let (re_t, im_t) = rfft::<TestRuntime>(signal, 1, dtype);
-        let re = to_f32(HostData::from_tensor_handle(&client, re_t, HostDataType::F32));
-        let im = to_f32(HostData::from_tensor_handle(&client, im_t, HostDataType::F32));
+        let re = to_f32(HostData::from_tensor_handle(
+            &client,
+            re_t,
+            HostDataType::F32,
+        ));
+        let im = to_f32(HostData::from_tensor_handle(
+            &client,
+            im_t,
+            HostDataType::F32,
+        ));
 
         assert!(
             (re[0] - n_fft as f32).abs() < 1e-2,
@@ -87,11 +92,8 @@ fn rfft_irfft_roundtrip_sweep() {
             })
             .collect();
         let sig_handle = client.create_from_slice(f32::as_bytes(&sig_data));
-        let signal = TensorHandle::<TestRuntime>::new_contiguous(
-            vec![BATCH, n_fft],
-            sig_handle,
-            dtype,
-        );
+        let signal =
+            TensorHandle::<TestRuntime>::new_contiguous(vec![BATCH, n_fft], sig_handle, dtype);
 
         let (re_t, im_t) = rfft::<TestRuntime>(signal, 1, dtype);
         let recovered = irfft::<TestRuntime>(re_t, im_t, 1, dtype);
@@ -106,8 +108,7 @@ fn rfft_irfft_roundtrip_sweep() {
             .zip(recovered_host.iter())
             .map(|(a, b)| (a - b).abs())
             .fold(0.0f32, f32::max);
-        let rms: f32 =
-            (sig_data.iter().map(|v| v * v).sum::<f32>() / n_fft as f32).sqrt();
+        let rms: f32 = (sig_data.iter().map(|v| v * v).sum::<f32>() / n_fft as f32).sqrt();
 
         // f32 round-trip error scales with log2(n_fft). 1e-4 relative is
         // comfortable at n_fft=16384 and well under the 0.03 absolute bound

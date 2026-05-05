@@ -8,6 +8,8 @@ the Python `nn/` tree). Three binaries:
   `calibration.json` / `threshold.json`.
 - `export_weights` — dump a trained checkpoint to a PyTorch-compatible
   `.safetensors` blob for the `python/burn_to_onnx.py` bridge.
+- `export_espdl` — native Burn checkpoint → ESP-DL `.espdl` export,
+  without Python, ONNX, safetensors, or Docker.
 
 The same source tree compiles against **two production GPU backends**:
 
@@ -102,6 +104,83 @@ cargo run --release -p nn-rs --no-default-features \
     --out runs/robust_session/export/tinyconv.safetensors
 ```
 
+## Export ESP-DL Natively
+
+Use `export_espdl` for the normal firmware model export path. It loads
+the Burn checkpoint directly, lowers `TinyConv` into the
+`burn-espdl-export` IR, collects calibration mel windows from the
+manifest, and writes:
+
+- `model.espdl`
+- `model.json` with quantization metadata
+- `model.info` with a compact graph dump
+
+Common macOS/Metal command:
+
+```sh
+cargo run --release -p nn-rs --no-default-features \
+    --features "std,metal" --bin export_espdl -- \
+    --checkpoint runs/robust_session/checkpoints/best.mpk \
+    --manifest /path/to/voicy/recordings/manifest.jsonl
+```
+
+Robust-session export with the local manifest:
+
+```sh
+cargo run --release -p nn-rs --no-default-features \
+    --features "std,metal" --bin export_espdl -- \
+    --checkpoint runs/robust_session/checkpoints/best.mpk \
+    --config nn-rs/configs/robust_session.yaml \
+    --manifest ../recordings/manifest.jsonl
+```
+
+Defaults:
+
+- `--config` defaults to `nn-rs/configs/robust_session.yaml`.
+- `--target` defaults to `esp32s3`.
+- `--num-bits` defaults to `8`; native export currently exposes INT8
+  only until INT16 has fixture-backed parity.
+- `--calib-split` defaults to `train`.
+- `--calib-windows` defaults to `512`.
+- If `--out` / `--out-dir` is omitted and the checkpoint lives under a
+  `checkpoints/` directory, output goes to sibling `export/model.espdl`.
+
+To choose the output directory explicitly:
+
+```sh
+cargo run --release -p nn-rs --no-default-features \
+    --features "std,metal" --bin export_espdl -- \
+    --checkpoint /tmp/nn-rs-robust-cuda/checkpoints/best.mpk \
+    --manifest /path/to/voicy/recordings/manifest.jsonl \
+    --out-dir /tmp/nn-rs-robust-cuda/export
+```
+
+Swap `metal` for `cuda` on a Linux/NVIDIA machine. The legacy
+safetensors → ONNX → esp-ppq Docker wrapper is still available as
+`scripts/burn_to_espdl_legacy.sh` for comparison and rollback.
+
+### Verify ESP-DL Acceptance
+
+Use `cargo xtask espdl-acceptance` to compare the native exporter
+against the preserved legacy esp-ppq path. The command runs both
+exporters, parses both `.espdl` files, and checks graph metadata,
+activation exponents, weights, and passive bias payloads.
+
+Run the full robust-session parity check with 512 calibration steps:
+
+```sh
+cargo xtask espdl-acceptance \
+    --checkpoint runs/robust_session/checkpoints/best.mpk \
+    --config nn-rs/configs/robust_session.yaml \
+    --manifest ../recordings/manifest.jsonl \
+    --out-dir target/espdl-acceptance-fixed-512 \
+    --calib-steps 512
+```
+
+The default acceptance run uses fewer calibration steps for speed. Use
+`--calib-steps 512` before treating a calibration/parity change as
+finished, because this matches the normal native export window count.
+
 ## Train on RunPod via SkyPilot
 
 If you don't have a local NVIDIA box, `sky.yaml` at the repo root
@@ -146,12 +225,11 @@ rsync -avz --progress \
     nn-rs-pump:sky_workdir/runs/robust_session/ \
     /tmp/nn-rs-robust-cuda/
 
-# 3) Finish on the laptop: safetensors → ONNX (onnxslim) → .espdl
-#    (esp-ppq PTQ INT8 in Docker). Requires Docker Desktop running.
-scripts/burn_to_espdl.sh \
+# 3) Finish on the laptop: Burn checkpoint → .espdl with the native
+#    Rust exporter. This path does not invoke Python, ONNX, or Docker.
+cargo run --release -p nn-rs --no-default-features --features std,metal --bin export_espdl -- \
     --checkpoint /tmp/nn-rs-robust-cuda/checkpoints/best.mpk \
-    --manifest   /path/to/voicy/recordings/manifest.jsonl \
-    --out-dir    /tmp/nn-rs-robust-cuda/export
+    --manifest   /path/to/voicy/recordings/manifest.jsonl
 
 # 4) Stop billing.
 sky down nn-rs-pump -y
@@ -159,6 +237,9 @@ sky down nn-rs-pump -y
 
 The final `.espdl` lands at `/tmp/nn-rs-robust-cuda/export/model.espdl`
 — copy it into `firmware/models/` and rebuild the firmware binary.
+
+The previous safetensors → ONNX → esp-ppq Docker wrapper is preserved at
+`scripts/burn_to_espdl_legacy.sh` for comparison and rollback.
 
 ### Re-runs on the same cluster
 

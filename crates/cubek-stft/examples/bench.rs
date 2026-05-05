@@ -29,9 +29,9 @@
 
 use std::time::Instant;
 
+use cubecl::TestRuntime;
 use cubecl::prelude::*;
 use cubecl::std::tensor::TensorHandle;
-use cubecl::TestRuntime;
 use cubek_fft::{irfft, rfft};
 use cubek_stft::stft;
 use cubek_stft::window::hann_window_symmetric;
@@ -173,7 +173,11 @@ fn bench_colored_rfft(client: &cubecl::client::ComputeClient<R>, dtype: StorageT
         samples_ms.push(dt);
         drop((re, im));
     }
-    summarize("colored_rfft_fwd (4096 x 128*8)", warmup_ms, &mut samples_ms);
+    summarize(
+        "colored_rfft_fwd (4096 x 128*8)",
+        warmup_ms,
+        &mut samples_ms,
+    );
 }
 
 fn bench_colored_rfft_plus_irfft(client: &cubecl::client::ComputeClient<R>, dtype: StorageType) {
@@ -204,7 +208,11 @@ fn bench_colored_rfft_plus_irfft(client: &cubecl::client::ComputeClient<R>, dtyp
         samples_ms.push(dt);
         drop(out);
     }
-    summarize("colored_rfft+irfft (4096 x 128*8)", warmup_ms, &mut samples_ms);
+    summarize(
+        "colored_rfft+irfft (4096 x 128*8)",
+        warmup_ms,
+        &mut samples_ms,
+    );
 }
 
 fn bench_mel_shape_rfft(client: &cubecl::client::ComputeClient<R>, dtype: StorageType) {
@@ -244,7 +252,11 @@ fn bench_mel_shape_rfft(client: &cubecl::client::ComputeClient<R>, dtype: Storag
         samples_ms.push(dt);
         drop((re, im));
     }
-    summarize("mel_shape_rfft (1024 x 128*101)", warmup_ms, &mut samples_ms);
+    summarize(
+        "mel_shape_rfft (1024 x 128*101)",
+        warmup_ms,
+        &mut samples_ms,
+    );
 }
 
 fn main() {

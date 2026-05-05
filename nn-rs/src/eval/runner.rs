@@ -46,7 +46,9 @@ impl AggregateMode {
         match s {
             "mean" => Ok(Self::Mean),
             "max" => Ok(Self::Max),
-            _ => Err(format!("unknown aggregate mode: {s} (expected `mean` or `max`)")),
+            _ => Err(format!(
+                "unknown aggregate mode: {s} (expected `mean` or `max`)"
+            )),
         }
     }
 
@@ -211,14 +213,12 @@ where
             .collect();
         let y_true: Vec<u8> = files_sorted.iter().map(|f| label_by_file[f]).collect();
 
-        let ckpt_dir = opts.checkpoint.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
-        let threshold = resolve_threshold(
-            opts,
-            &y_true,
-            &y_prob,
-            &ckpt_dir,
-            files_sorted.len(),
-        )?;
+        let ckpt_dir = opts
+            .checkpoint
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| PathBuf::from("."));
+        let threshold = resolve_threshold(opts, &y_true, &y_prob, &ckpt_dir, files_sorted.len())?;
 
         let metrics_file = binary_metrics(&y_true, &y_prob, threshold);
         let metrics_window = if opts.window_metrics && !window_probs.is_empty() {
@@ -380,7 +380,10 @@ fn resolve_threshold(
             &thr_path,
             serde_json::to_string_pretty(&calibration).map_err(io_err)?,
         )?;
-        println!("Wrote calibrated threshold next to checkpoint: {}", thr_path.display());
+        println!(
+            "Wrote calibrated threshold next to checkpoint: {}",
+            thr_path.display()
+        );
         return Ok(best_t);
     }
     let thr_path = ckpt_dir.join("threshold.json");
@@ -524,7 +527,10 @@ mod tests {
 
     #[test]
     fn aggregate_mean_and_max() {
-        assert_eq!(AggregateMode::Mean.apply(&[0.2, 0.4, 0.9]), (0.2 + 0.4 + 0.9) / 3.0);
+        assert_eq!(
+            AggregateMode::Mean.apply(&[0.2, 0.4, 0.9]),
+            (0.2 + 0.4 + 0.9) / 3.0
+        );
         assert_eq!(AggregateMode::Max.apply(&[0.2, 0.4, 0.9]), 0.9);
         assert_eq!(AggregateMode::Mean.apply(&[]), 0.0);
     }
