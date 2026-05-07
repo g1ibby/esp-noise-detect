@@ -11,7 +11,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use burn::backend::NdArray;
-use burn::tensor::backend::Backend;
+use burn::tensor::backend::BackendTypes;
 use burn_espdl_export::{BurnGraph, IrTensor, Layer, fold_batchnorm, fuse_relu};
 
 mod common;
@@ -44,7 +44,7 @@ fn dump_mininet_oracle() {
     eprintln!("wrote {}", out.display());
 }
 
-fn build_graph(device: &<B as Backend>::Device) -> BurnGraph {
+fn build_graph(device: &<B as BackendTypes>::Device) -> BurnGraph {
     let mut model = MiniNetConfig::default().init::<B>(device);
     perturb_bn_stats(&mut model, device, MODEL_SEED);
     let mut graph = mininet_to_burn_graph(&model, INPUT_SHAPE);

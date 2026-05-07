@@ -11,14 +11,14 @@
 use burn::backend::NdArray;
 use burn::nn::conv::Conv2dConfig;
 use burn::nn::{BatchNormConfig, Initializer, PaddingConfig2d};
-use burn::tensor::{Distribution, Tensor as BurnTensor, TensorData, backend::Backend};
+use burn::tensor::{Distribution, Tensor as BurnTensor, TensorData, backend::{Backend, BackendTypes}};
 use burn_espdl_export::ir::{Activation, BurnGraph, Layer, Tensor as IrTensor, fold_batchnorm};
 
 type B = NdArray;
 
 #[test]
 fn bn_fold_matches_unfolded_forward() {
-    let device: <B as Backend>::Device = Default::default();
+    let device: <B as BackendTypes>::Device = Default::default();
 
     // Hand-built two-layer block: Conv2d (with bias) → BatchNorm2d.
     let conv = Conv2dConfig::new([3, 4], [3, 3])
@@ -136,7 +136,7 @@ fn bn_fold_matches_unfolded_forward() {
 
 #[test]
 fn fold_no_op_when_no_bn() {
-    let device: <B as Backend>::Device = Default::default();
+    let device: <B as BackendTypes>::Device = Default::default();
     let conv = Conv2dConfig::new([1, 2], [1, 1])
         .with_bias(false)
         .init::<B>(&device);

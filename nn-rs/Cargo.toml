@@ -10,7 +10,7 @@ publish = false
 # pump-noise task lives here: the Burn mel front-end (step 7), the TinyConv
 # model (step 9), the training / eval CLIs (steps 10-11) and the weight
 # export bridge (step 12). Publishable reuse boundaries already sit in the
-# cubek-* and burn-audiomentations crates.
+# cubek-* crates and the external burn-audiomentations crate.
 #
 # Today the crate only ships the mel extractor — step 7 of the plan. The
 # rest is scaffolded in as it lands.

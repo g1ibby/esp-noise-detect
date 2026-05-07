@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/burn-audiomentations",
     "crates/burn-espdl-export",
     "nn-rs",
     "xtask",
@@ -55,7 +54,7 @@ cubek-stft = { git = "https://github.com/g1ibby/cubek-audio", rev = "56fe346c747
 cubek-phasevocoder = { git = "https://github.com/g1ibby/cubek-audio", rev = "56fe346c747112815657da5beabbfc7b42eda818", default-features = false }
 cubek-resample = { git = "https://github.com/g1ibby/cubek-audio", rev = "56fe346c747112815657da5beabbfc7b42eda818", default-features = false }
 cubek-sinc-filter = { git = "https://github.com/g1ibby/cubek-audio", rev = "56fe346c747112815657da5beabbfc7b42eda818", default-features = false }
-burn-audiomentations = { path = "crates/burn-audiomentations", default-features = false }
+burn-audiomentations = { git = "ssh://git@github.com/g1ibby/burn-audiomentations.git", rev = "e28eacb0bbeca2d6dcc89695e4657cf6e79fcc93", default-features = false }
 burn-espdl-export = { path = "crates/burn-espdl-export", default-features = false }
 nn-rs = { path = "nn-rs", default-features = false }
 

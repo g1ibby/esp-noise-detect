@@ -27,7 +27,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use burn::backend::NdArray;
-use burn::tensor::backend::Backend;
+use burn::tensor::backend::BackendTypes;
 use burn_espdl_export::{
     BurnGraph, CalibrationConfig, TensorRole, calibrate, fold_batchnorm, fuse_relu,
 };
@@ -40,7 +40,7 @@ type B = NdArray;
 
 const INPUT_SHAPE: [usize; 4] = [1, 1, 16, 16];
 
-fn build_graph(device: &<B as Backend>::Device, seed: u64) -> BurnGraph {
+fn build_graph(device: &<B as BackendTypes>::Device, seed: u64) -> BurnGraph {
     let mut model = MiniNetConfig::default().init::<B>(device);
     perturb_bn_stats(&mut model, device, seed);
     let mut graph = mininet_to_burn_graph(&model, INPUT_SHAPE);

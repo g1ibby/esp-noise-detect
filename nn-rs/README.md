@@ -287,12 +287,11 @@ cargo test-vulkan
 cargo test-cpu
 ```
 
-The `cubek-*` and `burn-audiomentations` crates each carry their own
-`test-*` features and a `tests/_backend_guard.rs` that fails the build
-if zero or none of those features is set — the silent fallback to wgpu
-(which `cubecl/build.rs` defaults to) would otherwise mask a CUDA-only
-box pretending to test on CUDA when it's actually using wgpu-Metal /
-wgpu-Vulkan.
+The `cubek-*` crates and external `burn-audiomentations` dependency each carry
+their own `test-*` features and a `tests/_backend_guard.rs` that fails the
+build if zero or none of those features is set — the silent fallback to wgpu
+(which `cubecl/build.rs` defaults to) would otherwise mask a CUDA-only box
+pretending to test on CUDA when it's actually using wgpu-Metal / wgpu-Vulkan.
 
 ## Troubleshooting
 

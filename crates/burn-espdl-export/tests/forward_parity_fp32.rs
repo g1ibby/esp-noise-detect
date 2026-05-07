@@ -12,7 +12,7 @@
 //! model in memory, runs it on a synthetic input, and compares.
 
 use burn::backend::NdArray;
-use burn::tensor::{Tensor as BurnTensor, backend::Backend};
+use burn::tensor::{Tensor as BurnTensor, backend::{Backend, BackendTypes}};
 use burn_espdl_export::ir::{self, fold_batchnorm, fuse_relu};
 
 mod common;
@@ -25,7 +25,7 @@ const INPUT_SHAPE: [usize; 4] = [1, 1, 16, 16];
 
 #[test]
 fn pre_fold_ir_matches_fixture_forward() {
-    let device: <B as Backend>::Device = Default::default();
+    let device: <B as BackendTypes>::Device = Default::default();
     let mut model = MiniNetConfig::default().init::<B>(&device);
     perturb_bn_stats(&mut model, &device, 0xc0ffee_u64);
 
@@ -54,7 +54,7 @@ fn pre_fold_ir_matches_fixture_forward() {
 
 #[test]
 fn post_fold_post_fuse_ir_matches_fixture_forward() {
-    let device: <B as Backend>::Device = Default::default();
+    let device: <B as BackendTypes>::Device = Default::default();
     let mut model = MiniNetConfig::default().init::<B>(&device);
     perturb_bn_stats(&mut model, &device, 0xdeadbeef_u64);
 
@@ -84,7 +84,7 @@ fn post_fold_post_fuse_ir_matches_fixture_forward() {
 fn ir_post_fold_is_invariant_across_inputs() {
     // Sanity: parity should hold for any input the executor sees,
     // not just one. Run a small batch through the same fixture.
-    let device: <B as Backend>::Device = Default::default();
+    let device: <B as BackendTypes>::Device = Default::default();
     let mut model = MiniNetConfig::default().init::<B>(&device);
     perturb_bn_stats(&mut model, &device, 0x4242_4242_u64);
 

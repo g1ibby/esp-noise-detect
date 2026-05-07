@@ -394,6 +394,7 @@ dependencies = [
 [[package]]
 name = "burn-audiomentations"
 version = "0.1.0"
+source = "git+ssh://git@github.com/g1ibby/burn-audiomentations.git?rev=e28eacb0bbeca2d6dcc89695e4657cf6e79fcc93#e28eacb0bbeca2d6dcc89695e4657cf6e79fcc93"
 dependencies = [
  "cubecl",
  "cubek-fft 0.2.0-pre.5 (git+https://github.com/tracel-ai/cubek?rev=4e10c44c0d18d9250f70439c453c3c28db1ec0d5)",
