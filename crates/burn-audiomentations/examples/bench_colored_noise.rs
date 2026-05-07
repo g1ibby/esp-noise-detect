@@ -4,7 +4,7 @@
 //! Why this bench exists: the training loop reports `aug_ms ≈ 328 ms` per log
 //! line on steps that include colored noise, or ~470 ms per fire once you
 //! factor out the 0.7 Bernoulli probability. The cubek-stft microbench (see
-//! `crates/cubek-stft/examples/bench.rs`) accounts for ~200 ms of that as
+//! `g1ibby/cubek-audio`'s `crates/cubek-stft/examples/bench.rs`) accounts for ~200 ms of that as
 //! raw rfft + irfft work. This bench isolates the remainder: RMS reductions,
 //! host readback of the two sum-of-squares tensors, and the add kernel.
 //!

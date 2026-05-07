@@ -1,10 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/cubek-stft",
-    "crates/cubek-phasevocoder",
-    "crates/cubek-resample",
-    "crates/cubek-sinc-filter",
     "crates/burn-audiomentations",
     "crates/burn-espdl-export",
     "nn-rs",
@@ -54,11 +50,11 @@ cubek-random     = { git = "https://github.com/tracel-ai/cubek", rev = "4e10c44c
 cubek-test-utils = { git = "https://github.com/tracel-ai/cubek", rev = "4e10c44c0d18d9250f70439c453c3c28db1ec0d5" }
 cubek-fft        = { git = "https://github.com/tracel-ai/cubek", rev = "4e10c44c0d18d9250f70439c453c3c28db1ec0d5" }
 
-# Our own kernel crates (see crates/).
-cubek-stft = { path = "crates/cubek-stft", default-features = false }
-cubek-phasevocoder = { path = "crates/cubek-phasevocoder", default-features = false }
-cubek-resample = { path = "crates/cubek-resample", default-features = false }
-cubek-sinc-filter = { path = "crates/cubek-sinc-filter", default-features = false }
+# Audio kernel crates.
+cubek-stft = { git = "https://github.com/g1ibby/cubek-audio", rev = "56fe346c747112815657da5beabbfc7b42eda818", default-features = false }
+cubek-phasevocoder = { git = "https://github.com/g1ibby/cubek-audio", rev = "56fe346c747112815657da5beabbfc7b42eda818", default-features = false }
+cubek-resample = { git = "https://github.com/g1ibby/cubek-audio", rev = "56fe346c747112815657da5beabbfc7b42eda818", default-features = false }
+cubek-sinc-filter = { git = "https://github.com/g1ibby/cubek-audio", rev = "56fe346c747112815657da5beabbfc7b42eda818", default-features = false }
 burn-audiomentations = { path = "crates/burn-audiomentations", default-features = false }
 burn-espdl-export = { path = "crates/burn-espdl-export", default-features = false }
 nn-rs = { path = "nn-rs", default-features = false }
