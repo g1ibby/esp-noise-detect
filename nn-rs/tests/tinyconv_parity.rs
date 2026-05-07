@@ -166,7 +166,7 @@ fn load_fixture(name: &str) -> Fixture {
 fn tensor_from<const D: usize>(
     data: Vec<f32>,
     shape: [usize; D],
-    device: &<Backend as burn::tensor::backend::Backend>::Device,
+    device: &<Backend as burn::tensor::backend::BackendTypes>::Device,
 ) -> Tensor<Backend, D> {
     Tensor::<Backend, D>::from_data(TensorData::new(data, shape), device)
 }
@@ -181,7 +181,7 @@ fn tensor_from<const D: usize>(
 fn inject_block(
     block: &mut TinyConvBlock<Backend>,
     w: BlockWeights,
-    device: &<Backend as burn::tensor::backend::Backend>::Device,
+    device: &<Backend as burn::tensor::backend::BackendTypes>::Device,
 ) {
     // Conv2d weights: PyTorch `[out, in, k, k]` = Burn `[out, in/g, kH, kW]`.
     let conv_down = tensor_from(w.conv_down, [w.out_ch, w.in_ch, 5, 5], device);

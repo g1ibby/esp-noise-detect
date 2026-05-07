@@ -109,7 +109,7 @@ where
 {
     pub cfg: TrainAppConfig,
     pub client: ComputeClient<R>,
-    pub device: <CubeBackend<R, F, I, BT> as burn::tensor::backend::Backend>::Device,
+    pub device: <CubeBackend<R, F, I, BT> as burn::tensor::backend::BackendTypes>::Device,
     pub mel: MelExtractor<R>,
 }
 
@@ -125,7 +125,7 @@ where
     pub fn new(
         cfg: TrainAppConfig,
         client: ComputeClient<R>,
-        device: <Backend<R, F, I, BT> as burn::tensor::backend::Backend>::Device,
+        device: <Backend<R, F, I, BT> as burn::tensor::backend::BackendTypes>::Device,
     ) -> Self {
         let mel_cfg = to_mel_config(&cfg.features);
         let mel = MelExtractor::<R>::new(

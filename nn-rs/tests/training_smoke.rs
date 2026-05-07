@@ -244,7 +244,7 @@ fn collect_batch<AB>(
     start_idx: usize,
     n: usize,
     _window_samples: usize,
-    device: &<AB as burn::tensor::backend::Backend>::Device,
+    device: &<AB as burn::tensor::backend::BackendTypes>::Device,
 ) -> AudioBatch<AB>
 where
     AB: burn::tensor::backend::Backend,

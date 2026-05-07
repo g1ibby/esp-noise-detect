@@ -216,7 +216,7 @@ where
 {
     pub cfg: TrainAppConfig,
     pub device: AB::Device,
-    pub inner_device: <AB::InnerBackend as burn::tensor::backend::Backend>::Device,
+    pub inner_device: <AB::InnerBackend as burn::tensor::backend::BackendTypes>::Device,
     pub client: ComputeClient<R>,
     pub mel: MelExtractor<R>,
     pub augment_train: Option<Compose<R>>,
@@ -239,7 +239,7 @@ where
         cfg: TrainAppConfig,
         client: ComputeClient<R>,
         device: AB::Device,
-        inner_device: <AB::InnerBackend as burn::tensor::backend::Backend>::Device,
+        inner_device: <AB::InnerBackend as burn::tensor::backend::BackendTypes>::Device,
     ) -> Self {
         let mel_cfg = to_mel_config(&cfg.features);
         let mel = MelExtractor::<R>::new(
@@ -628,7 +628,7 @@ fn apply_augment<R, F, I, BT>(
     waveforms: Tensor<CubeBackend<R, F, I, BT>, 2>,
     compose: &Compose<R>,
     rng: &mut TransformRng,
-    device: &<CubeBackend<R, F, I, BT> as burn::tensor::backend::Backend>::Device,
+    device: &<CubeBackend<R, F, I, BT> as burn::tensor::backend::BackendTypes>::Device,
 ) -> Tensor<CubeBackend<R, F, I, BT>, 2>
 where
     R: CubeRuntime,
